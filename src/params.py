@@ -5,7 +5,7 @@ may also contain parameters for the domain
 
 class game(object):
     """parameters for game"""
-    img_size = [30,30]  #height, width
+    img_size = [3,3]  #height, width
 
 class net(object):
     """parameters for the convnet"""
@@ -27,5 +27,6 @@ class net(object):
 class agent(object):
     """paramaters for agent behavior"""
     replay_memory = 1e6
-    min_replay = 1e4
+    min_replay = 10
     threads = 4
+    steps = 1000
