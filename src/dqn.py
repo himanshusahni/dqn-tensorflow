@@ -35,7 +35,7 @@ class dqn(object):
         self.min_replay = params.agent.min_replay       #min length of memory queue
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
                                     self.min_replay, tf.float32,
-                                    shapes = [self.img_height,self.img_width, 3],  #image(2), history, reward, terminal_flag
+                                    shapes = [self.img_height, self.img_width, 4],  #image(2), history, reward, terminal_flag
                                     name = 'experience_replay')
         #create threads to play the game and collect experience
         self.coord = tf.train.Coordinator()
