@@ -3,10 +3,6 @@ contains all training parameters for the full dqn+rnn for transfer
 may also contain parameters for the domain
 """
 
-class game(object):
-    """parameters for game"""
-    img_size = [3,3]  #height, width
-
 class net(object):
     """parameters for the convnet"""
     n_units       = [32, 64, 64]      #convolution filters at each layer
@@ -16,17 +12,18 @@ class net(object):
     history       = 3                 #num channels in input
     len_buffer    = 100
     batch_size    = 32
+    img_height = 3
+    img_width = 3
+    img_size = [img_height, img_width]
 
-    def __init__(self, game_env):
-        """sets parameters local to a game"""
-        self.output_dims = len(game_env.actions)
-        self.img_height = game.img_size[0]
-        self.img_width = game.img_size[1]
+    # def __init__(self, game_env):
+    #     """sets parameters local to a game"""
+    #     self.output_dims = len(game_env.actions)
 
 
 class agent(object):
     """paramaters for agent behavior"""
     replay_memory = 1e6
     min_replay = 10
-    threads = 4
+    available_threads = 4
     steps = 1000
