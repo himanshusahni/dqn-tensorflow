@@ -84,9 +84,6 @@ class dqn(object):
         for thread in agent.gameplay_threads:
             thread.start()
 
-    def take_game_action(self, action, game):
-        """tells the game environment to execute an action. does not return anything"""
-
     def get_action(self, state):
         """returns action recommended by target network"""
 
@@ -95,27 +92,6 @@ class dqn(object):
         """draws minibatch from experience queue and updates current net"""
         dequed = self.experience.dequeue()
         return dequed
-
-    def get_complete_state(self, rawstate, thread_num):
-        """
-        adds new screen grab to history buffer and returns complete state.
-        In the very beginning just appends tensors of all zeros to make up the
-        self.history channel tensors.
-        """
-        #increment buffer position
-        self.buffer_pos[thread_num] += 1
-        self.buffer_pos[thread_num] %= self.len_buffer
-        #add screen to buffer
-        self.history[thread_num][self.buffer_pos[thread_num]] = tf.expand_dims(rawstate, -1)
-        #grab last 'history' screens into a state
-        state = tf.identity(self.history[thread_num][self.buffer_pos[thread_num]])  #TODO:can defiitely do better than this concaatination at each step
-        back_counter = self.buffer_pos[thread_num]
-        for i in range(self.history - 1):
-            if back_counter == 0:
-                back_counter = self.len_buffer
-            back_counter -= 1
-            state = tf.concat(2, [self.history[back_counter], state])       #concatenate in the channel dimension
-        return state
 
 
 
