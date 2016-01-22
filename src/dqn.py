@@ -7,28 +7,32 @@ import time
 import params
 import game_env
 import convnet
+import domains
 
 class dqn(object):
     """deep q learning agent for arbitrary domains."""
-    def __init__(self, params, sess):
-        self.sess = sess
+    def __init__(self, sess, gameworld):
         super(dqn, self).__init__()
-        self.available_threads = params.agent.available_threads
-        net_params = params.net
-        self.max_steps = params.agent.steps
-        #create the convnet
+        #tensorflow session
+        self.sess = sess
 
-        # self.net = convnet.ConvNetGenerator(net_params)
-        self.batch_size = net_params.batch_size
-        self.img_height = net_params.img_height
-        self.img_width = net_params.img_width
-
-        #keep track of history
-        self.history = net_params.history   #TODO: look for a better way to buffer history
+        #agent parameters
+        agent_params = params.agent_params
+        self.max_steps = agent_params.steps                 #max training steps
         self.steps = 0
+        self.replay_memory = agent_params.replay_memory     #max length of memory queue
+        self.min_replay = agent_params.min_replay           #min length of memory queue
+        self.history = agent_params.history                 #no. of frames of memory in state
+        self.num_gameplay_threads = agent_params.num_gameplay_threads
+
+        #create game environments and gameplaying threads
+        self.games = [game_env.Environment(gameworld(params.game_params), agent_params, _) for _ in range(self.num_gameplay_threads)]
+        self.gameplay_threads = [threading.Thread(target=self.perceive, args=(self.games[thread],)) for thread in range(self.num_gameplay_threads)]
+        self.img_size = self.games[0].get_img_size()
+        (self.img_height, self.img_width) = self.img_size
+        self.available_actions = self.games[0].get_actions()
+
         #create experience buffer
-        self.replay_memory = params.agent.replay_memory     #max length of memory queue
-        self.min_replay = params.agent.min_replay       #min length of memory queue
         # self.experience = tf.RandomShuffleQueue(self.replay_memory,
         #                             self.min_replay, dtypes=(tf.float32, tf.float32, tf.bool),
         #                             shapes = ([self.img_height, self.img_width, self.history], [1], [1]),  #image(2), history, reward, terminal_flag
@@ -37,6 +41,7 @@ class dqn(object):
                                     self.min_replay, dtypes=tf.float32,
                                     shapes = [self.img_height, self.img_width, self.history],  #image(2), history, reward, terminal_flag
                                     name = 'experience_replay')
+        #enqueue and dequeue ops to the experience memory
         self.dequeue_op = self.experience.dequeue()
         self.coord = tf.train.Coordinator()
         self.state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
@@ -44,22 +49,40 @@ class dqn(object):
         self.terminal_placeholder = tf.placeholder(tf.bool, [1])
         # self.enqueue_op = self.experience.enqueue((self.state_placeholder, self.reward_placeholder, self.terminal_placeholder))
         self.enqueue_op = self.experience.enqueue(self.state_placeholder)
-    def perceive(self, game_):
+
+        #set up convnet
+        net_params = params.net_params
+        self.batch_size = net_params.batch_size
+        net_params.output_dims = len(self.available_actions)
+        net_params.history = self.history
+        net_params.img_size = self.img_size
+        (net_params.img_height, net_params.img_width) = self.img_size
+        self.net = convnet.ConvNetGenerator(net_params)
+
+
+
+
+    def perceive(self, env):
         """
         main function.
         """
         with self.coord.stop_on_exception():
             while not self.coord.should_stop():
-                try:
-                    state = game_.grab_screen()
-                    reward = np.array([1])
-                    terminal = np.array([False])
-                    # self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state,
-                    #                                                               self.reward_placeholder: reward,
-                    #                                                               self.terminal_placeholder: terminal})
-                    self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state})
-                except Exception as e:
-                    print e
+                state = env.get_state()
+                reward = np.array([1])
+                terminal = np.array([False])
+                # self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state,
+                #                                                               self.reward_placeholder: reward,
+                #                                                               self.terminal_placeholder: terminal})
+                self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state})
+
+    def start_playing(self):
+        """
+        Starts the gameplay threads. Can only be called once for an agent!!
+        Calling multiple times will raise an exception!!
+        """
+        for thread in agent.gameplay_threads:
+            thread.start()
 
     def take_game_action(self, action, game):
         """tells the game environment to execute an action. does not return anything"""
@@ -97,13 +120,11 @@ class dqn(object):
 
 
 sess = tf.Session()
-
 sess.run(tf.initialize_all_variables())
-agent = dqn(params, sess)
+agent = dqn(sess, domains.fire_fighter)
+
 #start the experience collection!
-games = [game_env.game(params.net, i) for i in range(params.agent.available_threads)]
-for _ in range(agent.available_threads):
-    threading.Thread(target=agent.perceive, args=(games[_],)).start()
+agent.start_playing()
 
 
 with sess.as_default():

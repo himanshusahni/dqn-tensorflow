@@ -1,20 +1,28 @@
 from collections import deque
 import numpy as np
 
-
-
-class game(object):
-    def __init__(self, params, num):
-        self.actions = ['Left', 'Right', 'Up', 'Down']
-        self.screen_size = params.img_size
+class Environment(object):
+    """Shell for simplyfying certain tasks for agent"""
+    def __init__(self, game, params, num):
+        #game parameters
+        self.game = game
+        self.img_size = game.get_dims()
+        #history
         self.history = params.history
-        self.counter = 0
-        self.screen_history = deque([np.expand_dims(0*np.ones(params.img_size), -1),np.expand_dims(1*np.ones(params.img_size), -1)], maxlen=self.history)
+        self.screen_history = deque([np.expand_dims(0*np.ones(self.img_size), -1),np.expand_dims(1*np.ones(self.img_size), -1)], maxlen=self.history)
         self.num = num
-    def grab_screen(self):
+    def get_actions(self):
+        return self.game.actions
+
+    def get_num_actions(self):
+        return len(self.game.actions)
+
+    def get_img_size(self):
+        return self.img_size
+
+    def get_state(self):
         """current screen of the game"""
-        self.counter += 1
-        screen = np.expand_dims(self.counter*np.ones(self.screen_size), -1)
+        screen = np.expand_dims(self.game.grab_screen(), -1)
         self.screen_history.append(screen)
         # print [self.screen_history[hist].shape for hist in range(self.history)]
         state = np.concatenate([self.screen_history[hist] for hist in range(self.history)], axis=2)

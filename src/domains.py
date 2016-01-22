@@ -18,4 +18,8 @@ class fire_fighter(object):
         screen = self.counter*np.ones(self.screen_size)
         return screen
 
-    # def create_screen(self, )
+    def get_dims(self):
+        """screen size in pixels"""
+        return self.screen_size
+
+print fire_fighter.grab_screen
