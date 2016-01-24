@@ -33,22 +33,22 @@ class dqn(object):
         self.available_actions = self.games[0].get_actions()
 
         #create experience buffer
-        # self.experience = tf.RandomShuffleQueue(self.replay_memory,
-        #                             self.min_replay, dtypes=(tf.float32, tf.float32, tf.bool),
-        #                             shapes = ([self.img_height, self.img_width, self.history], [1], [1]),  #image(2), history, reward, terminal_flag
-        #                             name = 'experience_replay')
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
-                                    self.min_replay, dtypes=tf.float32,
-                                    shapes = [self.img_height, self.img_width, self.history],  #image(2), history, reward, terminal_flag
+                                    self.min_replay, dtypes=(tf.float32, tf.float32, tf.bool),
+                                    shapes = ([self.img_height, self.img_width, self.history], [1], [1]),  #image(2), history, reward, terminal_flag
                                     name = 'experience_replay')
+        # self.experience = tf.RandomShuffleQueue(self.replay_memory,
+        #                             self.min_replay, dtypes=tf.float32,
+        #                             shapes = [self.img_height, self.img_width, self.history],  #image(2), history, reward, terminal_flag
+        #                             name = 'experience_replay')
         #enqueue and dequeue ops to the experience memory
         self.dequeue_op = self.experience.dequeue()
         self.coord = tf.train.Coordinator()
         self.state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
         self.reward_placeholder = tf.placeholder(tf.float32, [1])
         self.terminal_placeholder = tf.placeholder(tf.bool, [1])
-        # self.enqueue_op = self.experience.enqueue((self.state_placeholder, self.reward_placeholder, self.terminal_placeholder))
-        self.enqueue_op = self.experience.enqueue(self.state_placeholder)
+        self.enqueue_op = self.experience.enqueue((self.state_placeholder, self.reward_placeholder, self.terminal_placeholder))
+        # self.enqueue_op = self.experience.enqueue(self.state_placeholder)
 
         #set up convnet
         net_params = params.net_params
@@ -68,13 +68,16 @@ class dqn(object):
         """
         with self.coord.stop_on_exception():
             while not self.coord.should_stop():
-                state = env.get_state()
-                reward = np.array([1])
-                terminal = np.array([False])
-                # self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state,
-                #                                                               self.reward_placeholder: reward,
-                #                                                               self.terminal_placeholder: terminal})
-                self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state})
+                try:
+                    state = env.get_state()
+                    reward = np.array([1])
+                    terminal = np.array([False])
+                    self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state,
+                                                                                  self.reward_placeholder: reward,
+                                                                                  self.terminal_placeholder: terminal})
+                    # self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state})
+                except Exection as e:
+                    print e
 
     def start_playing(self):
         """
@@ -83,6 +86,7 @@ class dqn(object):
         """
         for thread in agent.gameplay_threads:
             thread.start()
+
 
     def get_action(self, state):
         """returns action recommended by target network"""
