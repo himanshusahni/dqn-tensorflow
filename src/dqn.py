@@ -34,21 +34,19 @@ class dqn(object):
 
         #create experience buffer
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
-                                    self.min_replay, dtypes=(tf.float32, tf.float32, tf.bool),
-                                    shapes = ([self.img_height, self.img_width, self.history], [1], [1]),  #image(2), history, reward, terminal_flag
+                                    self.min_replay, dtypes=(tf.float32, tf.float32, tf.float32, tf.bool),
+                                    shapes = ([self.img_height, self.img_width, self.history], [len(self.available_actions)], [1], [1]),  #image(2), history, reward, terminal_flag
                                     name = 'experience_replay')
-        # self.experience = tf.RandomShuffleQueue(self.replay_memory,
-        #                             self.min_replay, dtypes=tf.float32,
-        #                             shapes = [self.img_height, self.img_width, self.history],  #image(2), history, reward, terminal_flag
-        #                             name = 'experience_replay')
+
         #enqueue and dequeue ops to the experience memory
         self.dequeue_op = self.experience.dequeue()
         self.coord = tf.train.Coordinator()
-        self.state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
+        self.enq_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
+        self.action_placeholder = tf.placeholder(tf.float32, [len(self.available_actions)])
         self.reward_placeholder = tf.placeholder(tf.float32, [1])
         self.terminal_placeholder = tf.placeholder(tf.bool, [1])
-        self.enqueue_op = self.experience.enqueue((self.state_placeholder, self.reward_placeholder, self.terminal_placeholder))
-        # self.enqueue_op = self.experience.enqueue(self.state_placeholder)
+        self.enqueue_op = self.experience.enqueue((self.enq_state_placeholder, self.action_placeholder,
+                                                    self.reward_placeholder, self.terminal_placeholder))
 
         #set up convnet
         net_params = params.net_params
@@ -57,25 +55,32 @@ class dqn(object):
         net_params.history = self.history
         net_params.img_size = self.img_size
         (net_params.img_height, net_params.img_width) = self.img_size
-        self.net = convnet.ConvNetGenerator(net_params)
+        self.net_state_placeholder = tf.placeholder(tf.float32, [None, self.img_height, self.img_width, self.history])
+        self.net = convnet.ConvNetGenerator(net_params, self.net_state_placeholder)
 
 
 
 
     def perceive(self, env):
         """
-        main function.
+        method for collecting game playing experience. Can be run multithreaded with
+        different game sessions. Enqueues all sessions to a RandomShuffleQueue
         """
         with self.coord.stop_on_exception():
             while not self.coord.should_stop():
                 try:
-                    state = env.get_state()
+                    state = env.get_state()     #get current state from environment
+                    #pick best action according to convnet
+                    action_values = sess.run(self.net.logits, feed_dict={self.net_state_placeholder:  np.expand_dims(state, axis=0)})
+                    print action_values
+                    # action_values = np.zeros(len(self.available_actions))
                     reward = np.array([1])
                     terminal = np.array([False])
-                    self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state,
-                                                                                  self.reward_placeholder: reward,
-                                                                                  self.terminal_placeholder: terminal})
-                    # self.sess.run(self.enqueue_op, feed_dict={self.state_placeholder: state})
+                    #insert into queue
+                    self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: state,
+                                                                  self.action_placeholder: action_values,
+                                                                  self.reward_placeholder: reward,
+                                                                  self.terminal_placeholder: terminal})
                 except Exection as e:
                     print e
 
@@ -100,8 +105,8 @@ class dqn(object):
 
 
 sess = tf.Session()
-sess.run(tf.initialize_all_variables())
 agent = dqn(sess, domains.fire_fighter)
+sess.run(tf.initialize_all_variables())
 
 #start the experience collection!
 agent.start_playing()

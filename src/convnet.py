@@ -7,14 +7,13 @@ class ConvNetGenerator(object):
     """
     creates, initializes, and returns a convolutional neural network with given params.
     """
-    def __init__(self, params):
+    def __init__(self, params, _input):
         """
         _input is a placeholder variable.
         """
         super(ConvNetGenerator, self).__init__()
         self.input_shape = [None, params.img_height, params.img_width, params.history]  #batch of input images to net
         self.input_dims = self.input_shape[1]*self.input_shape[2]*self.input_shape[3]   #pixels in each image
-        self.input = tf.placeholder("float", shape = self.input_shape)
         self.output_dims = params.output_dims
         self.n_units = params.n_units
         try:
@@ -38,7 +37,7 @@ class ConvNetGenerator(object):
         if not (self.full_connect_layers > 0):
             raise ValueError("At least one fully connected layer required!")
 
-        self.logits = self.create_inference(self.input)
+        self.logits = self.create_inference(_input)
 
     def create_inference(self, _input):
         """
@@ -59,6 +58,7 @@ class ConvNetGenerator(object):
                     out_channels = self.n_units[conv_layer]
                 shape = [self.filter_size[conv_layer], self.filter_size[conv_layer],
                         in_channels, out_channels]
+                print shape
                 W = self.create_weights(shape)
                 conv = tf.nn.conv2d(outputs[-1], W, [1, self.filter_stride[conv_layer],
                                                         self.filter_stride[conv_layer],1], padding='SAME')
