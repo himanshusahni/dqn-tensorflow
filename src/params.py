@@ -14,7 +14,7 @@ class net_params(object):
 
 class agent_params(object):
     """paramaters for agent behavior"""
-    replay_memory        = 1e6
+    replay_memory        = 1000
     min_replay           = 10
     num_gameplay_threads = 4
     steps                = 1000

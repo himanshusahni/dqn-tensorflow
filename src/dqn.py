@@ -23,14 +23,12 @@ class dqn(object):
         self.replay_memory = agent_params.replay_memory     #max length of memory queue
         self.min_replay = agent_params.min_replay           #min length of memory queue
         self.history = agent_params.history                 #no. of frames of memory in state
-        self.num_gameplay_threads = agent_params.num_gameplay_threads
 
         #create game environments and gameplaying threads
-        self.games = [game_env.Environment(gameworld(params.game_params), agent_params, _) for _ in range(self.num_gameplay_threads)]
-        self.gameplay_threads = [threading.Thread(target=self.perceive, args=(self.games[thread],)) for thread in range(self.num_gameplay_threads)]
-        self.img_size = self.games[0].get_img_size()
+        self.env = game_env.Environment(gameworld(params.game_params), agent_params)
+        self.img_size = self.env.get_img_size()
         (self.img_height, self.img_width) = self.img_size
-        self.available_actions = self.games[0].get_actions()
+        self.available_actions = self.env.get_actions()
 
         #create experience buffer
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
@@ -40,7 +38,6 @@ class dqn(object):
 
         #enqueue and dequeue ops to the experience memory
         self.dequeue_op = self.experience.dequeue()
-        self.coord = tf.train.Coordinator()
         self.enq_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
         self.action_placeholder = tf.placeholder(tf.float32, [len(self.available_actions)])
         self.reward_placeholder = tf.placeholder(tf.float32, [1])
@@ -61,36 +58,27 @@ class dqn(object):
 
 
 
-    def perceive(self, env):
+    def perceive(self):
         """
         method for collecting game playing experience. Can be run multithreaded with
         different game sessions. Enqueues all sessions to a RandomShuffleQueue
         """
-        with self.coord.stop_on_exception():
-            while not self.coord.should_stop():
-                try:
-                    state = env.get_state()     #get current state from environment
-                    #pick best action according to convnet
-                    action_values = sess.run(self.net.logits, feed_dict={self.net_state_placeholder:  np.expand_dims(state, axis=0)})
-                    print action_values
-                    # action_values = np.zeros(len(self.available_actions))
-                    reward = np.array([1])
-                    terminal = np.array([False])
-                    #insert into queue
-                    self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: state,
-                                                                  self.action_placeholder: action_values,
-                                                                  self.reward_placeholder: reward,
-                                                                  self.terminal_placeholder: terminal})
-                except Exection as e:
-                    print e
-
-    def start_playing(self):
-        """
-        Starts the gameplay threads. Can only be called once for an agent!!
-        Calling multiple times will raise an exception!!
-        """
-        for thread in agent.gameplay_threads:
-            thread.start()
+        try:
+            state = self.env.get_state()     #get current state from environment
+            #pick best action according to convnet
+            # action_values = sess.run(self.net.logits, feed_dict={self.net_state_placeholder:  np.expand_dims(state, axis=0)})
+            action_values= self.net.logits.eval(feed_dict={self.net_state_placeholder:  np.expand_dims(state, axis=0)})
+            action_values = np.squeeze(action_values)
+            print action_values
+            reward = np.array([1])
+            terminal = np.array([False])
+            #insert into queue
+            self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: state,
+                                                          self.action_placeholder: action_values,
+                                                          self.reward_placeholder: reward,
+                                                          self.terminal_placeholder: terminal})
+        except Exception as e:
+            print e
 
 
     def get_action(self, state):
@@ -103,21 +91,19 @@ class dqn(object):
         return dequed
 
 
-
+#create session and agent
 sess = tf.Session()
 agent = dqn(sess, domains.fire_fighter)
 sess.run(tf.initialize_all_variables())
 
-#start the experience collection!
-agent.start_playing()
-
-
+steps = 0
 with sess.as_default():
-    while(1):
-        print sess.run(agent.dequeue_op)
-        print "break!"
-        # print agent.experience.size().eval()
-        time.sleep(.5)
+    while(steps < 100):
+        agent.perceive()
+        steps+= 1
+    while (steps > 80):
+        print sess.run(agent.train())
+        steps-=1
 
 # agent.coord.request_stop()
 # agent.coord.join(enqueue_threads)
