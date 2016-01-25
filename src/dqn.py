@@ -26,6 +26,7 @@ class dqn(object):
 
         #create game environments and gameplaying threads
         self.env = game_env.Environment(gameworld(params.game_params), agent_params)
+        self.state = self.env.get_state()
         self.img_size = self.env.get_img_size()
         (self.img_height, self.img_width) = self.img_size
         self.available_actions = self.env.get_actions()
@@ -64,17 +65,19 @@ class dqn(object):
         different game sessions. Enqueues all sessions to a RandomShuffleQueue
         """
         try:
-            state = self.env.get_state()     #get current state from environment
-            #pick best action according to convnet
-            action_values = self.net.logits.eval(feed_dict={self.net_state_placeholder:  np.expand_dims(state, axis=0)})
+            #pick best action according to convnet on current state
+            action_values = self.net.logits.eval(feed_dict={self.net_state_placeholder:  np.expand_dims(self.state, axis=0)})
             max_a = np.argmax(action_values)
-            reward = 1
-            terminal = False
+            #execute that action in the environment,
+            (state_p, reward, terminal) = self.env.take_action(max_a)
+
             #insert into queue
-            self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: state,
+            self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: self.state,
                                                           self.action_placeholder: max_a,
                                                           self.reward_placeholder: reward,
                                                           self.terminal_placeholder: terminal})
+            #update current state
+            self.state = state_p
         except Exception as e:
             print e
 
@@ -99,7 +102,7 @@ with sess.as_default():
     while(steps < 100):
         agent.perceive()
         steps+= 1
-    while (steps > 80):
+    while (steps > 10):
         print sess.run(agent.train())
         steps-=1
 

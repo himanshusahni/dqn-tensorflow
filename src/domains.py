@@ -14,12 +14,13 @@ class fire_fighter(object):
 
     def grab_screen(self):
         """current screen of the game"""
-        self.counter += 1
-        screen = self.counter*np.ones(self.screen_size)
-        return screen
+        return self.counter*np.ones(self.screen_size)
 
     def get_dims(self):
         """screen size in pixels"""
         return self.screen_size
 
-print fire_fighter.grab_screen
+    def execute_action(self, a):
+        """takes action #a in the game and returns new screen, reward and terminal"""
+        self.counter += 1
+        return (self.grab_screen(), 1, False)
