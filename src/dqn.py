@@ -30,11 +30,13 @@ class dqn(object):
         self.img_size = self.env.get_img_size()
         (self.img_height, self.img_width) = self.img_size
         self.available_actions = self.env.get_actions()
+        self.batch_size = params.net_params.batch_size
 
         #create experience buffer
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
-                                    self.min_replay, dtypes=(tf.float32, tf.float32, tf.float32, tf.bool),
-                                    shapes = ([self.img_height, self.img_width, self.history], [], [], []),  #state(rows,cols,history), action, reward, terminal
+                                    self.min_replay, dtypes=(tf.float32, tf.float32, tf.float32, tf.float32, tf.bool),
+                                    #state(rows,cols,history), action, reward, next_state(rows,cols,history), terminal
+                                    shapes = ([self.img_height, self.img_width, self.history], [], [], [self.img_height, self.img_width, self.history], []),
                                     name = 'experience_replay')
 
         #enqueue and dequeue ops to the experience memory
@@ -42,19 +44,21 @@ class dqn(object):
         self.enq_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
         self.action_placeholder = tf.placeholder(tf.float32, [])
         self.reward_placeholder = tf.placeholder(tf.float32, [])
+        self.next_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
         self.terminal_placeholder = tf.placeholder(tf.bool, [])
         self.enqueue_op = self.experience.enqueue((self.enq_state_placeholder, self.action_placeholder,
-                                                    self.reward_placeholder, self.terminal_placeholder))
+                                                    self.reward_placeholder, self.next_state_placeholder,
+                                                    self.terminal_placeholder))
+        self.dequeue_op = self.experience.dequeue_many(self.batch_size)
 
         #set up convnet
         net_params = params.net_params
-        self.batch_size = net_params.batch_size
         net_params.output_dims = len(self.available_actions)
         net_params.history = self.history
         net_params.img_size = self.img_size
         (net_params.img_height, net_params.img_width) = self.img_size
-        self.net_state_placeholder = tf.placeholder(tf.float32, [None, self.img_height, self.img_width, self.history])
-        self.net = convnet.ConvNetGenerator(net_params, self.net_state_placeholder)
+        self.batch_state_placeholder = tf.placeholder(tf.float32, [None, self.img_height, self.img_width, self.history])
+        self.net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder)
 
 
 
@@ -66,18 +70,19 @@ class dqn(object):
         """
         try:
             #pick best action according to convnet on current state
-            action_values = self.net.logits.eval(feed_dict={self.net_state_placeholder:  np.expand_dims(self.state, axis=0)})
+            action_values = self.net.logits.eval(feed_dict={self.batch_state_placeholder:  np.expand_dims(self.state, axis=0)})
             max_a = np.argmax(action_values)
             #execute that action in the environment,
-            (state_p, reward, terminal) = self.env.take_action(max_a)
+            (next_state, reward, terminal) = self.env.take_action(max_a)
 
             #insert into queue
             self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: self.state,
                                                           self.action_placeholder: max_a,
                                                           self.reward_placeholder: reward,
+                                                          self.next_state_placeholder: next_state,
                                                           self.terminal_placeholder: terminal})
             #update current state
-            self.state = state_p
+            self.state = next_state
         except Exception as e:
             print e
 
@@ -88,7 +93,11 @@ class dqn(object):
 
     def train(self):
         """draws minibatch from experience queue and updates current net"""
-        dequed = self.experience.dequeue()
+        try:
+            batch = sess.run(self.dequeue_op)
+            return (batch[0][0],batch[0][3], batch[3][0], batch[3][3])
+        except Exception as e:
+            print e
         return dequed
 
 
@@ -103,8 +112,9 @@ with sess.as_default():
         agent.perceive()
         steps+= 1
     while (steps > 10):
-        print sess.run(agent.train())
-        steps-=1
+        print agent.train()
+
+        steps-=params.net_params.batch_size
 
 # agent.coord.request_stop()
 # agent.coord.join(enqueue_threads)
