@@ -37,16 +37,16 @@ class ConvNetGenerator(object):
         if not (self.full_connect_layers > 0):
             raise ValueError("At least one fully connected layer required!")
 
-        self.logits = self.create_inference(_input)
+        self.logits = self.inference(_input)
 
-    def create_inference(self, _input):
+    def inference(self, _input):
         """
         Cnn with self.conv_layers convolutional layers and self.full_connect_layers fully
         connected layers. relu non-linearity after each conv layer. no max-pooling.
         """
         outputs = [_input]
-        print "INPUT"
-        print outputs[-1].get_shape()
+        #print "INPUT"
+        #print outputs[-1].get_shape()
         for conv_layer in range(self.conv_layers):
             with tf.variable_scope('conv' + str(conv_layer)) as scope:
                 #create shape of convolutional weight matrix
@@ -58,7 +58,7 @@ class ConvNetGenerator(object):
                     out_channels = self.n_units[conv_layer]
                 shape = [self.filter_size[conv_layer], self.filter_size[conv_layer],
                         in_channels, out_channels]
-                print shape
+                #print shape
                 W = self.create_weights(shape)
                 conv = tf.nn.conv2d(outputs[-1], W, [1, self.filter_stride[conv_layer],
                                                         self.filter_stride[conv_layer],1], padding='SAME')
@@ -66,8 +66,8 @@ class ConvNetGenerator(object):
                 bias = tf.nn.bias_add(conv, b)
                 conv = tf.nn.relu(bias, name=scope.name)
                 outputs.append(conv)
-                print "CONV" + str(conv_layer)
-                print outputs[-1].get_shape()
+                #print "CONV" + str(conv_layer)
+                #print outputs[-1].get_shape()
 
         last_conv = outputs[-1]
         dim = 1
@@ -75,8 +75,8 @@ class ConvNetGenerator(object):
             dim *= d
         reshape = tf.reshape(last_conv, [-1, dim], name='reshape')
         outputs.append(reshape)
-        print "RESHAPED"
-        print outputs[-1].get_shape()
+        #print "RESHAPED"
+        #print outputs[-1].get_shape()
         for connect_layer in range(self.full_connect_layers):
             with tf.variable_scope('hidden' + str(connect_layer)) as scope:
                 #find size of weight matrix
@@ -90,8 +90,8 @@ class ConvNetGenerator(object):
                 b = self.create_bias(out_size)
                 hidden = tf.nn.relu_layer(outputs[-1], W, b, name = scope.name)
                 outputs.append(hidden)
-                print "FULLY CONNECTED"
-                print outputs[-1].get_shape()
+                #print "FULLY CONNECTED"
+                #print outputs[-1].get_shape()
 
 
         #last linear layer connecting to outputs
@@ -103,8 +103,8 @@ class ConvNetGenerator(object):
             b = self.create_bias(out_size)
             hidden = tf.nn.bias_add(tf.matmul(outputs[-1], W), b)
             outputs.append(hidden)
-        print "LAST FULLY CONNECTED"
-        print outputs[-1].get_shape()
+        #print "LAST FULLY CONNECTED"
+        #print outputs[-1].get_shape()
         return outputs[-1]  #return linear activations of output
 
 
