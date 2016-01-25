@@ -13,14 +13,21 @@ class fire_fighter(object):
         self.counter = 0
 
     def grab_screen(self):
-        """current screen of the game"""
+        """current screen of the game
+        returns: numpy nd-array of shape screen_size"""
         return self.counter*np.ones(self.screen_size)
 
     def get_dims(self):
-        """screen size in pixels"""
+        """row and column of screen in pixels"""
         return self.screen_size
 
     def execute_action(self, a):
-        """takes action #a in the game and returns new screen, reward and terminal"""
+        """takes action a in the game and gives new screen, reward and terminal
+        if the new state is terminal, then start a new game.
+        a: index of action to be executed
+        returns: new game screen (from grab_screen)
+                 reward for executing given action
+                 whether the new state is a terminal state or not
+        """
         self.counter += 1
         return (self.grab_screen(), 1, False)
