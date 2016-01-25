@@ -36,14 +36,14 @@ class dqn(object):
 
         #create experience buffer
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
-                                    self.min_replay, dtypes=(tf.float32, tf.float32, tf.float32, tf.float32, tf.bool),
+                                    self.min_replay, dtypes=(tf.float32, tf.int64, tf.float32, tf.float32, tf.bool),
                                     #state(rows,cols,history), action, reward, next_state(rows,cols,history), terminal
                                     shapes = ([self.img_height, self.img_width, self.history], [], [], [self.img_height, self.img_width, self.history], []),
                                     name = 'experience_replay')
 
         #enqueue op to the experience memory
         self.enq_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
-        self.action_placeholder = tf.placeholder(tf.float32, [])
+        self.action_placeholder = tf.placeholder(tf.int64, [])
         self.reward_placeholder = tf.placeholder(tf.float32, [])
         self.next_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
         self.terminal_placeholder = tf.placeholder(tf.bool, [])
@@ -91,33 +91,39 @@ class dqn(object):
             print e
 
 
-    def get_action(self, state):
-        """returns action recommended by target network"""
+    def getQUpdate(self, states, actions, rewards, next_states, terminals):
+        #get max action for next state: Q_target
+        with tf.variable_scope(self.target_scope, reuse = True):
+            Q_target = self.target_net.inference(next_states)
+            Q_target_max = tf.reduce_max(Q_target, reduction_indices=[1])
+        #discount: gamma*Q_target_max
+        Q_target_disc = tf.mul(Q_target_max , self.gamma)
+        #total estimated value : r + gamma*Q2
+        est_value = tf.add(rewards, Q_target_disc)
+        #get action values for current state: Q_train
+        with tf.variable_scope(self.train_scope, reuse = True):
+            Q_train = self.train_net.inference(states)
+        #now choose the Q values for 'actions' from Q_train
+        flat_Q_train = tf.reshape(Q_train, shape=[-1])
+        flat_actions = tf.add(actions, tf.cast(tf.range(tf.shape(Q_train)[0]) * tf.shape(Q_train)[1], tf.int64))
+        Q_train_actions = tf.gather(flat_Q_train, flat_actions)
 
+        return Q_train_actions
 
-    def train(self):
+    def qLearnMinibatch(self):
         """draws minibatch from experience queue and updates current net"""
         try:
             #draw minibatch, [states, actions, rewards, next_states, terminals]
-            (states, actions, rewards, next_states, terminals) = self.experience.dequeue_many(self.batch_size)
-            #get action values for current state: Q_train
-            with tf.variable_scope(self.train_scope, reuse = True):
-                Q_train = self.train_net.inference(states)
-            #get max action for next state: Q_target
-            with tf.variable_scope(self.target_scope, reuse = True):
-                Q_target = self.target_net.inference(next_states)
-                max_a_target = tf.argmax(Q_target, dimension=1)
-                Q_target_max = tf.reduce_max(Q_target, reduction_indices=[1])
-            #discount!: gamma*Q_target_max
-            Q_target_disc = tf.mul(Q_target_max , self.gamma)
-            #total estimated value : r + gamma*Q2
-            est_value = tf.add(rewards, Q_target_disc)
-            #now need to choose the max_a_target indices from Q_train!!
-            
+            minibatch = self.experience.dequeue_many(self.batch_size)
+            targets = self.getQUpdate(*minibatch)
 
 
 
-            return target_max_values
+
+
+
+
+            return targets
 
         except Exception as e:
             print e
@@ -133,8 +139,8 @@ with sess.as_default():
     while(steps < 100):
         agent.perceive()
         steps+= 1
-    while (steps > 10):
-        print sess.run(agent.train())
+    while (steps > 90):
+        print sess.run(agent.qLearnMinibatch())
 
         steps-=params.net_params.batch_size
 
