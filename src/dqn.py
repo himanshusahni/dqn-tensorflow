@@ -33,15 +33,15 @@ class dqn(object):
         #create experience buffer
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
                                     self.min_replay, dtypes=(tf.float32, tf.float32, tf.float32, tf.bool),
-                                    shapes = ([self.img_height, self.img_width, self.history], [len(self.available_actions)], [1], [1]),  #image(2), history, reward, terminal_flag
+                                    shapes = ([self.img_height, self.img_width, self.history], [], [], []),  #state(rows,cols,history), action, reward, terminal
                                     name = 'experience_replay')
 
         #enqueue and dequeue ops to the experience memory
         self.dequeue_op = self.experience.dequeue()
         self.enq_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
-        self.action_placeholder = tf.placeholder(tf.float32, [len(self.available_actions)])
-        self.reward_placeholder = tf.placeholder(tf.float32, [1])
-        self.terminal_placeholder = tf.placeholder(tf.bool, [1])
+        self.action_placeholder = tf.placeholder(tf.float32, [])
+        self.reward_placeholder = tf.placeholder(tf.float32, [])
+        self.terminal_placeholder = tf.placeholder(tf.bool, [])
         self.enqueue_op = self.experience.enqueue((self.enq_state_placeholder, self.action_placeholder,
                                                     self.reward_placeholder, self.terminal_placeholder))
 
@@ -66,15 +66,13 @@ class dqn(object):
         try:
             state = self.env.get_state()     #get current state from environment
             #pick best action according to convnet
-            # action_values = sess.run(self.net.logits, feed_dict={self.net_state_placeholder:  np.expand_dims(state, axis=0)})
-            action_values= self.net.logits.eval(feed_dict={self.net_state_placeholder:  np.expand_dims(state, axis=0)})
-            action_values = np.squeeze(action_values)
-            print action_values
-            reward = np.array([1])
-            terminal = np.array([False])
+            action_values = self.net.logits.eval(feed_dict={self.net_state_placeholder:  np.expand_dims(state, axis=0)})
+            max_a = np.argmax(action_values)
+            reward = 1
+            terminal = False
             #insert into queue
             self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: state,
-                                                          self.action_placeholder: action_values,
+                                                          self.action_placeholder: max_a,
                                                           self.reward_placeholder: reward,
                                                           self.terminal_placeholder: terminal})
         except Exception as e:
