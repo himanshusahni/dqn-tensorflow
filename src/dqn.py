@@ -23,6 +23,7 @@ class dqn(object):
         self.replay_memory = agent_params.replay_memory     #max length of memory queue
         self.min_replay = agent_params.min_replay           #min length of memory queue
         self.history = agent_params.history                 #no. of frames of memory in state
+        self.gamma = agent_params.gamma
 
         #create game environments and gameplaying threads
         self.env = game_env.Environment(gameworld(params.game_params), agent_params)
@@ -30,6 +31,7 @@ class dqn(object):
         self.img_size = self.env.get_img_size()
         (self.img_height, self.img_width) = self.img_size
         self.available_actions = self.env.get_actions()
+        self.num_actions = len(self.available_actions)
         self.batch_size = params.net_params.batch_size
 
         #create experience buffer
@@ -39,8 +41,7 @@ class dqn(object):
                                     shapes = ([self.img_height, self.img_width, self.history], [], [], [self.img_height, self.img_width, self.history], []),
                                     name = 'experience_replay')
 
-        #enqueue and dequeue ops to the experience memory
-        self.dequeue_op = self.experience.dequeue()
+        #enqueue op to the experience memory
         self.enq_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
         self.action_placeholder = tf.placeholder(tf.float32, [])
         self.reward_placeholder = tf.placeholder(tf.float32, [])
@@ -49,18 +50,21 @@ class dqn(object):
         self.enqueue_op = self.experience.enqueue((self.enq_state_placeholder, self.action_placeholder,
                                                     self.reward_placeholder, self.next_state_placeholder,
                                                     self.terminal_placeholder))
-        self.dequeue_op = self.experience.dequeue_many(self.batch_size)
+
 
         #set up convnet
         net_params = params.net_params
-        net_params.output_dims = len(self.available_actions)
+        net_params.output_dims = self.num_actions
         net_params.history = self.history
         net_params.img_size = self.img_size
         (net_params.img_height, net_params.img_width) = self.img_size
         self.batch_state_placeholder = tf.placeholder(tf.float32, [None, self.img_height, self.img_width, self.history])
-        self.net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder)
-
-
+        with tf.variable_scope("train") as self.train_scope:
+            self.train_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder)
+        with tf.variable_scope("target") as self.target_scope:
+            self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder)
+        #ops to train network
+        # self.loss_op = self.create_loss(self.batch_state_placeholder)
 
 
     def perceive(self):
@@ -70,7 +74,7 @@ class dqn(object):
         """
         try:
             #pick best action according to convnet on current state
-            action_values = self.net.logits.eval(feed_dict={self.batch_state_placeholder:  np.expand_dims(self.state, axis=0)})
+            action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(self.state, axis=0)})
             max_a = np.argmax(action_values)
             #execute that action in the environment,
             (next_state, reward, terminal) = self.env.take_action(max_a)
@@ -94,11 +98,29 @@ class dqn(object):
     def train(self):
         """draws minibatch from experience queue and updates current net"""
         try:
-            batch = sess.run(self.dequeue_op)
-            return (batch[0][0],batch[0][3], batch[3][0], batch[3][3])
+            #draw minibatch, [states, actions, rewards, next_states, terminals]
+            (states, actions, rewards, next_states, terminals) = self.experience.dequeue_many(self.batch_size)
+            #get action values for current state: Q_train
+            with tf.variable_scope(self.train_scope, reuse = True):
+                Q_train = self.train_net.inference(states)
+            #get max action for next state: Q_target
+            with tf.variable_scope(self.target_scope, reuse = True):
+                Q_target = self.target_net.inference(next_states)
+                max_a_target = tf.argmax(Q_target, dimension=1)
+                Q_target_max = tf.reduce_max(Q_target, reduction_indices=[1])
+            #discount!: gamma*Q_target_max
+            Q_target_disc = tf.mul(Q_target_max , self.gamma)
+            #total estimated value : r + gamma*Q2
+            est_value = tf.add(rewards, Q_target_disc)
+            #now need to choose the max_a_target indices from Q_train!!
+            
+
+
+
+            return target_max_values
+
         except Exception as e:
             print e
-        return dequed
 
 
 #create session and agent
@@ -112,7 +134,7 @@ with sess.as_default():
         agent.perceive()
         steps+= 1
     while (steps > 10):
-        print agent.train()
+        print sess.run(agent.train())
 
         steps-=params.net_params.batch_size
 
