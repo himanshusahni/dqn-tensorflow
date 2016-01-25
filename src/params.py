@@ -10,7 +10,7 @@ class net_params(object):
     filter_stride = [4, 2, 1]         #stride at each layer
     n_hid         = [512]             #size of fully connected layers
     len_buffer    = 100
-    batch_size    = 32
+    batch_size    = 10
 
 class agent_params(object):
     """paramaters for agent behavior"""
@@ -19,6 +19,7 @@ class agent_params(object):
     num_gameplay_threads = 4
     steps                = 1000
     history              = 3
+    gamma           = 0.99
 
 class game_params:
     img_size = [32,32]
