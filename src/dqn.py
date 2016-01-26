@@ -96,19 +96,22 @@ class dqn(object):
         with tf.variable_scope(self.target_scope, reuse = True):
             Q_target = self.target_net.inference(next_states)
             Q_target_max = tf.reduce_max(Q_target, reduction_indices=[1])
-        #discount: gamma*Q_target_max
+        #terminal states have Q=0, Q_target_max = (1-terminal)*Q_target_max
+        Q_target_max = tf.mul(Q_target_max, tf.add(1.0, tf.mul(tf.cast(terminals, tf.float32), -1)))
+        #discount: (1-terminal)*gamma*Q_target_max
         Q_target_disc = tf.mul(Q_target_max , self.gamma)
-        #total estimated value : r + gamma*Q2
+        #total estimated value : r + (1-terminal)*gamma*Q_target_max
         est_value = tf.add(rewards, Q_target_disc)
         #get action values for current state: Q_train
         with tf.variable_scope(self.train_scope, reuse = True):
             Q_train = self.train_net.inference(states)
-        #now choose the Q values for 'actions' from Q_train
+        #now choose the Q values for 'actions' from Q_train. workaround till tf gets proper slicing
         flat_Q_train = tf.reshape(Q_train, shape=[-1])
         flat_actions = tf.add(actions, tf.cast(tf.range(tf.shape(Q_train)[0]) * tf.shape(Q_train)[1], tf.int64))
         Q_train_actions = tf.gather(flat_Q_train, flat_actions)
-
-        return Q_train_actions
+        #final targets = r + (1-terminal)*gamma*Q_target_max - Q_train_actions
+        targets = tf.add(est_value, tf.mul(Q_train_actions, -1))
+        return targets
 
     def qLearnMinibatch(self):
         """draws minibatch from experience queue and updates current net"""
