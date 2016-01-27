@@ -25,9 +25,9 @@ class fire_fighter(object):
         """takes action a in the game and gives new screen, reward and terminal
         if the new state is terminal, then start a new game.
         a: index of action to be executed
-        returns: new game screen (from grab_screen)
-                 reward for executing given action
-                 whether the new state is a terminal state or not
+        returns: numpy.ndarray, shape=self.screen_size: new game screen (from grab_screen)
+                 float32: reward for executing given action
+                 boolean: whether the new state is a terminal state or not
         """
         self.counter += 1
         return (self.grab_screen(), 1, False)
