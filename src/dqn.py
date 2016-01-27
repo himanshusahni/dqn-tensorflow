@@ -36,14 +36,14 @@ class dqn(object):
 
         #create experience buffer
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
-                                    self.min_replay, dtypes=(tf.float32, tf.int64, tf.float32, tf.float32, tf.bool),
+                                    self.min_replay, dtypes=(tf.float32, tf.int32, tf.float32, tf.float32, tf.bool),
                                     #state(rows,cols,history), action, reward, next_state(rows,cols,history), terminal
                                     shapes = ([self.img_height, self.img_width, self.history], [], [], [self.img_height, self.img_width, self.history], []),
                                     name = 'experience_replay')
 
         #enqueue op to the experience memory
         self.enq_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
-        self.action_placeholder = tf.placeholder(tf.int64, [])
+        self.action_placeholder = tf.placeholder(tf.int32, [])
         self.reward_placeholder = tf.placeholder(tf.float32, [])
         self.next_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
         self.terminal_placeholder = tf.placeholder(tf.bool, [])
@@ -76,6 +76,7 @@ class dqn(object):
             #pick best action according to convnet on current state
             action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(self.state, axis=0)})
             max_a = np.argmax(action_values)
+            # max_a = np.random.randint(0,3)
             #execute that action in the environment,
             (next_state, reward, terminal) = self.env.take_action(max_a)
 
@@ -107,11 +108,16 @@ class dqn(object):
             Q_train = self.train_net.inference(states)
         #now choose the Q values for 'actions' from Q_train. workaround till tf gets proper slicing
         flat_Q_train = tf.reshape(Q_train, shape=[-1])
-        flat_actions = tf.add(actions, tf.cast(tf.range(tf.shape(Q_train)[0]) * tf.shape(Q_train)[1], tf.int64))
+        flat_actions = tf.add(actions, tf.cast(tf.range(tf.shape(Q_train)[0]) * tf.shape(Q_train)[1], tf.int32))
         Q_train_actions = tf.gather(flat_Q_train, flat_actions)
         #final targets = r + (1-terminal)*gamma*Q_target_max - Q_train_actions
         targets = tf.add(est_value, tf.mul(Q_train_actions, -1))
-        return targets
+        #make targets one-hot style
+        sparse_actions = tf.reshape(actions, [self.batch_size, 1])
+        indices = tf.reshape(tf.range(self.batch_size), [self.batch_size, 1])
+        concated = tf.concat(1, [indices, sparse_actions])
+        dense_targets = tf.sparse_to_dense(concated, [self.batch_size, self.num_actions], targets, 0.0)
+        return dense_targets
 
     def qLearnMinibatch(self):
         """draws minibatch from experience queue and updates current net"""
@@ -119,7 +125,7 @@ class dqn(object):
             #draw minibatch, [states, actions, rewards, next_states, terminals]
             minibatch = self.experience.dequeue_many(self.batch_size)
             targets = self.getQUpdate(*minibatch)
-
+            
 
 
 
