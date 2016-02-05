@@ -113,11 +113,6 @@ class dqn(object):
         Q_train_actions = tf.reduce_sum(Q_train_one_hot, reduction_indices=[1])
         #final targets = r + (1-terminal)*gamma*Q_target_max - Q_train_actions
         targets = tf.add(est_value, tf.mul(Q_train_actions, -1))
-        #make targets one-hot style
-        sparse_actions = tf.reshape(actions, [self.batch_size, 1])
-        indices = tf.reshape(tf.range(self.batch_size), [self.batch_size, 1])
-        concated = tf.concat(1, [indices, sparse_actions])
-        dense_targets = tf.sparse_to_dense(concated, [self.batch_size, self.num_actions], targets, 0.0)
         return dense_targets
 
     def qLearnMinibatch(self):
