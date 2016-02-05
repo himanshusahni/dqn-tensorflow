@@ -123,7 +123,7 @@ class dqn(object):
             targets = self.getQUpdate(*minibatch)
             #get loss
             loss = tf.square(targets)
-            #TODO: optimization op should really be created only once
+            #create the gradient descent op
             self.opt_op = self.opt.minimize(loss)
             return self.opt_op
 
@@ -135,14 +135,14 @@ class dqn(object):
 sess = tf.Session()
 agent = dqn(sess, domains.fire_fighter)
 sess.run(tf.initialize_all_variables())
-
+train_op = agent.qLearnMinibatch()
 steps = 0
 with sess.as_default():
     while(steps < 100):
         agent.perceive()
         steps+= 1
     while (steps > 80):
-        print sess.run(agent.qLearnMinibatch())
+        print sess.run(train_op)
         agent.target_net.copy_weights(agent.train_net.var_dir, sess)
         steps-=params.net_params.batch_size
 
