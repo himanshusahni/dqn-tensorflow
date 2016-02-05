@@ -7,11 +7,12 @@ class ConvNetGenerator(object):
     """
     creates, initializes, and returns a convolutional neural network with given params.
     """
-    def __init__(self, params, _input):
+    def __init__(self, params, net_input, trainable):
         """
-        _input is a placeholder variable.
+        net_input is a placeholder variable.
         """
         super(ConvNetGenerator, self).__init__()
+        self.trainable = trainable     #whether the weights on this network will be trained
         self.input_shape = [None, params.img_height, params.img_width, params.history]  #batch of input images to net
         self.input_dims = self.input_shape[1]*self.input_shape[2]*self.input_shape[3]   #pixels in each image
         self.output_dims = params.output_dims
@@ -37,14 +38,14 @@ class ConvNetGenerator(object):
         if not (self.full_connect_layers > 0):
             raise ValueError("At least one fully connected layer required!")
 
-        self.logits = self.inference(_input)
+        self.logits = self.inference(net_input)
 
-    def inference(self, _input):
+    def inference(self, net_input):
         """
         Cnn with self.conv_layers convolutional layers and self.full_connect_layers fully
         connected layers. relu non-linearity after each conv layer. no max-pooling.
         """
-        outputs = [_input]
+        outputs = [net_input]
         #print "INPUT"
         #print outputs[-1].get_shape()
         for conv_layer in range(self.conv_layers):
@@ -115,10 +116,13 @@ class ConvNetGenerator(object):
         currently created on highest priority available device (cpu or gpu)
         """
         return tf.get_variable('weights', shape,
-                        initializer=tf.truncated_normal_initializer())
+                        initializer=tf.truncated_normal_initializer(),
+                        trainable=self.trainable)
 
     def create_bias(self, size):
         """
         creates bias vector of shape [size] filled with 0.1
         """
-        return tf.get_variable('bias', [size], initializer=tf.constant_initializer(0.1))
+        return tf.get_variable('bias', [size],
+                                initializer=tf.constant_initializer(0.1),
+                                trainable=self.trainable)

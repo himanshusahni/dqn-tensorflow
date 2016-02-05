@@ -60,11 +60,12 @@ class dqn(object):
         (net_params.img_height, net_params.img_width) = self.img_size
         self.batch_state_placeholder = tf.placeholder(tf.float32, [None, self.img_height, self.img_width, self.history])
         with tf.variable_scope("train") as self.train_scope:
-            self.train_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder)
+            self.train_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=True)
         with tf.variable_scope("target") as self.target_scope:
-            self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder)
+            self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
 
         #ops to train network
+        self.opt = tf.train.GradientDescentOptimizer(learning_rate=net_params.lr)
 
     def perceive(self):
         """
@@ -108,12 +109,12 @@ class dqn(object):
         with tf.variable_scope(self.train_scope, reuse = True):
             Q_train = self.train_net.inference(states)
         #first zero out all the action values except the one taken
-        Q_train_one_hot = tf.mul(Q_train, actions)
+        Q_train_one_hot = tf.mul(Q_train, tf.cast(actions, tf.float32))
         #now gather them using sum
         Q_train_actions = tf.reduce_sum(Q_train_one_hot, reduction_indices=[1])
         #final targets = r + (1-terminal)*gamma*Q_target_max - Q_train_actions
         targets = tf.add(est_value, tf.mul(Q_train_actions, -1))
-        return dense_targets
+        return targets
 
     def qLearnMinibatch(self):
         """draws minibatch from experience queue and updates current net"""
@@ -121,16 +122,11 @@ class dqn(object):
             #draw minibatch = [states, actions, rewards, next_states, terminals]
             minibatch = self.experience.dequeue_many(self.batch_size)
             targets = self.getQUpdate(*minibatch)
-            #TODO: verify if targets are the loss or the gradients, this is assuming it is loss
-
-
-
-
-
-
-
-
-            return targets
+            #get loss
+            loss = tf.square(targets)
+            #TODO: optimization op should really be created only once
+            self.opt_op = self.opt.minimize(loss)
+            return self.opt_op
 
         except Exception as e:
             print e

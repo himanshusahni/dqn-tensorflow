@@ -9,8 +9,8 @@ class net_params(object):
     filter_size   = [8, 4, 4]         #size at each layer
     filter_stride = [4, 2, 1]         #stride at each layer
     n_hid         = [512]             #size of fully connected layers
-    len_buffer    = 100
-    batch_size    = 10
+    batch_size    = 10                #states in minibatch
+    lr            = 0.0025            #learning rate
 
 class agent_params(object):
     """paramaters for agent behavior"""
