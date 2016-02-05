@@ -38,12 +38,12 @@ class dqn(object):
         self.experience = tf.RandomShuffleQueue(self.replay_memory,
                                     self.min_replay, dtypes=(tf.float32, tf.int32, tf.float32, tf.float32, tf.bool),
                                     #state(rows,cols,history), action, reward, next_state(rows,cols,history), terminal
-                                    shapes = ([self.img_height, self.img_width, self.history], [], [], [self.img_height, self.img_width, self.history], []),
+                                    shapes = ([self.img_height, self.img_width, self.history], [self.num_actions], [], [self.img_height, self.img_width, self.history], []),
                                     name = 'experience_replay')
 
         #enqueue op to the experience memory
         self.enq_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
-        self.action_placeholder = tf.placeholder(tf.int32, [])
+        self.action_placeholder = tf.placeholder(tf.int32, [self.num_actions])
         self.reward_placeholder = tf.placeholder(tf.float32, [])
         self.next_state_placeholder = tf.placeholder(tf.float32, [self.img_height, self.img_width, self.history])
         self.terminal_placeholder = tf.placeholder(tf.bool, [])
@@ -63,9 +63,8 @@ class dqn(object):
             self.train_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder)
         with tf.variable_scope("target") as self.target_scope:
             self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder)
-        #ops to train network
-        # self.loss_op = self.create_loss(self.batch_state_placeholder)
 
+        #ops to train network
 
     def perceive(self):
         """
@@ -79,10 +78,11 @@ class dqn(object):
             # max_a = np.random.randint(0,3)
             #execute that action in the environment,
             (next_state, reward, terminal) = self.env.take_action(max_a)
-
+            action_one_hot = np.zeros(self.num_actions, dtype='int32')
+            action_one_hot[max_a] = 1
             #insert into queue
             self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: self.state,
-                                                          self.action_placeholder: max_a,
+                                                          self.action_placeholder: action_one_hot,
                                                           self.reward_placeholder: reward,
                                                           self.next_state_placeholder: next_state,
                                                           self.terminal_placeholder: terminal})
@@ -93,6 +93,7 @@ class dqn(object):
 
 
     def getQUpdate(self, states, actions, rewards, next_states, terminals):
+        """calulcates gradients on a minibatch"""
         #get max action for next state: Q_target
         with tf.variable_scope(self.target_scope, reuse = True):
             Q_target = self.target_net.inference(next_states)
@@ -106,10 +107,10 @@ class dqn(object):
         #get action values for current state: Q_train
         with tf.variable_scope(self.train_scope, reuse = True):
             Q_train = self.train_net.inference(states)
-        #now choose the Q values for 'actions' from Q_train. workaround till tf gets proper slicing
-        flat_Q_train = tf.reshape(Q_train, shape=[-1])
-        flat_actions = tf.add(actions, tf.cast(tf.range(tf.shape(Q_train)[0]) * tf.shape(Q_train)[1], tf.int32))
-        Q_train_actions = tf.gather(flat_Q_train, flat_actions)
+        #first zero out all the action values except the one taken
+        Q_train_one_hot = tf.mul(Q_train, actions)
+        #now gather them using sum
+        Q_train_actions = tf.reduce_sum(Q_train_one_hot, reduction_indices=[1])
         #final targets = r + (1-terminal)*gamma*Q_target_max - Q_train_actions
         targets = tf.add(est_value, tf.mul(Q_train_actions, -1))
         #make targets one-hot style
@@ -122,10 +123,12 @@ class dqn(object):
     def qLearnMinibatch(self):
         """draws minibatch from experience queue and updates current net"""
         try:
-            #draw minibatch, [states, actions, rewards, next_states, terminals]
+            #draw minibatch = [states, actions, rewards, next_states, terminals]
             minibatch = self.experience.dequeue_many(self.batch_size)
             targets = self.getQUpdate(*minibatch)
-            
+            #TODO: verify if targets are the loss or the gradients, this is assuming it is loss
+
+
 
 
 
