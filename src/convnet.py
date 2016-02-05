@@ -37,8 +37,36 @@ class ConvNetGenerator(object):
             raise TypeError("Size of fully connected units undefined")
         if not (self.full_connect_layers > 0):
             raise ValueError("At least one fully connected layer required!")
-
+        #store a dictionary to all weights in network
+        self.var_dir = {}
+        #scope under which the network was created
+        self.scope_name = tf.constant("dummy").name.rsplit('/',1)[0]
         self.logits = self.inference(net_input)
+
+
+    def create_weights(self, shape):
+        """
+        creates weights with truncated normal initialization (mean = 0, stddev = 1.0)
+        currently created on highest priority available device (cpu or gpu)
+        """
+        return tf.get_variable('weights', shape,
+                        initializer=tf.truncated_normal_initializer(),
+                        trainable=self.trainable)
+
+    def create_bias(self, size):
+        """
+        creates bias vector of shape [size] filled with 0.1
+        """
+        return tf.get_variable('bias', [size],
+                                initializer=tf.constant_initializer(0.1),
+                                trainable=self.trainable)
+
+    def copy_weights(self, other_var_dir, sess):
+        """overwrite current set of weights with weights of another network"""
+        for (var_name, var) in other_var_dir.iteritems():
+            this_var_name = self.scope_name + '/' + var_name.split('/', 1)[1]
+            sess.run(self.var_dir[this_var_name].assign(var))
+
 
     def inference(self, net_input):
         """
@@ -64,6 +92,8 @@ class ConvNetGenerator(object):
                 conv = tf.nn.conv2d(outputs[-1], W, [1, self.filter_stride[conv_layer],
                                                         self.filter_stride[conv_layer],1], padding='SAME')
                 b = self.create_bias(out_channels)
+                self.var_dir[W.name] = W
+                self.var_dir[b.name] = b
                 bias = tf.nn.bias_add(conv, b)
                 conv = tf.nn.relu(bias, name=scope.name)
                 outputs.append(conv)
@@ -89,6 +119,8 @@ class ConvNetGenerator(object):
                 shape = [in_size, out_size]
                 W = self.create_weights(shape)
                 b = self.create_bias(out_size)
+                self.var_dir[W.name] = W
+                self.var_dir[b.name] = b
                 hidden = tf.nn.relu_layer(outputs[-1], W, b, name = scope.name)
                 outputs.append(hidden)
                 #print "FULLY CONNECTED"
@@ -102,27 +134,10 @@ class ConvNetGenerator(object):
             shape = [in_size, out_size]
             W = self.create_weights(shape)
             b = self.create_bias(out_size)
+            self.var_dir[W.name] = W
+            self.var_dir[b.name] = b
             hidden = tf.nn.bias_add(tf.matmul(outputs[-1], W), b)
             outputs.append(hidden)
         #print "LAST FULLY CONNECTED"
         #print outputs[-1].get_shape()
         return outputs[-1]  #return linear activations of output
-
-
-
-    def create_weights(self, shape):
-        """
-        creates weights with truncated normal initialization (mean = 0, stddev = 1.0)
-        currently created on highest priority available device (cpu or gpu)
-        """
-        return tf.get_variable('weights', shape,
-                        initializer=tf.truncated_normal_initializer(),
-                        trainable=self.trainable)
-
-    def create_bias(self, size):
-        """
-        creates bias vector of shape [size] filled with 0.1
-        """
-        return tf.get_variable('bias', [size],
-                                initializer=tf.constant_initializer(0.1),
-                                trainable=self.trainable)

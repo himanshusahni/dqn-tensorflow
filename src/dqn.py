@@ -63,7 +63,6 @@ class dqn(object):
             self.train_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=True)
         with tf.variable_scope("target") as self.target_scope:
             self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
-
         #ops to train network
         self.opt = tf.train.GradientDescentOptimizer(learning_rate=net_params.lr)
 
@@ -142,9 +141,9 @@ with sess.as_default():
     while(steps < 100):
         agent.perceive()
         steps+= 1
-    while (steps > 90):
+    while (steps > 80):
         print sess.run(agent.qLearnMinibatch())
-
+        agent.target_net.copy_weights(agent.train_net.var_dir, sess)
         steps-=params.net_params.batch_size
 
 # agent.coord.request_stop()
