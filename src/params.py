@@ -22,4 +22,4 @@ class agent_params(object):
     gamma           = 0.99
 
 class game_params:
-    img_size = [32,32]
+    img_size = [5,5]
