@@ -22,4 +22,8 @@ class agent_params(object):
     gamma           = 0.99
 
 class game_params:
-    img_size = [32,32]
+    img_size = [5,5]
+    agent_color = 0.25
+    water_color = 0.50
+    fire_color = 1.0
+    agent_water_color = 0.75
