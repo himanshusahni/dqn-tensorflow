@@ -40,15 +40,20 @@ class fire_fighter(object):
         self.screen = self.counter*np.zeros(self.screen_size)
         #set color of agent location
         _color = self.agent_water_color if self.has_water else self.agent_color
-        self.screen[self.agent[0]*self.grid_to_pixel:(self.agent[0]+1)*self.grid_to_pixel,
-                    self.agent[1]*self.grid_to_pixel:(self.agent[1]+1)*self.grid_to_pixel] = self.agent_water_color if self.has_water else self.agent_color
+        for _ in range(3):
+            self.screen[self.agent[0]*self.grid_to_pixel:(self.agent[0]+1)*self.grid_to_pixel,
+                        self.agent[1]*self.grid_to_pixel:(self.agent[1]+1)*self.grid_to_pixel, _] = _color[_]
+
         #set color of water location
         _color = self.agent_water_color if self.has_water else self.water_color
-        self.screen[self.water[0]*self.grid_to_pixel:(self.water[0]+1)*self.grid_to_pixel,
-                    self.water[1]*self.grid_to_pixel:(self.water[1]+1)*self.grid_to_pixel] = self.agent_water_color if self.has_water else self.agent_color
+        for _ in range(3):
+            self.screen[self.water[0]*self.grid_to_pixel:(self.water[0]+1)*self.grid_to_pixel,
+                        self.water[1]*self.grid_to_pixel:(self.water[1]+1)*self.grid_to_pixel, _] = _color[_]
+
         #set color of fire
-        self.screen[self.fire[0]*self.grid_to_pixel:(self.fire[0]+1)*self.grid_to_pixel,
-                    self.fire[1]*self.grid_to_pixel:(self.fire[1]+1)*self.grid_to_pixel] = self.fire_color
+        for _ in range(3):
+            self.screen[self.fire[0]*self.grid_to_pixel:(self.fire[0]+1)*self.grid_to_pixel,
+                        self.fire[1]*self.grid_to_pixel:(self.fire[1]+1)*self.grid_to_pixel, _] = self.fire_color[_]
         plt.imshow(self.screen)
         plt.show()
         return self.screen
