@@ -22,7 +22,9 @@ class agent_params(object):
     gamma           = 0.99
 
 class game_params:
-    img_size = [5,5]
+    grid_size = [5,5]
+    grid_to_pixel = 6
+    img_size = [g*grid_to_pixel for g in grid_size]
     agent_color = 0.25
     water_color = 0.50
     fire_color = 1.0

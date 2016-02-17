@@ -4,6 +4,7 @@ Test domains for deep transfer
 import numpy as np
 import random
 from collections import deque
+import matplotlib.pyplot as plt
 
 from params import game_params
 
@@ -16,29 +17,41 @@ class fire_fighter(object):
 
     def __init__(self, params):
         self.screen_size = params.img_size
+        self.grid_size = params.grid_size
+        self.grid_to_pixel = params.grid_to_pixel
         self.agent_color = params.agent_color
         self.water_color = params.water_color
         self.fire_color = params.fire_color
         self.agent_water_color = params.agent_water_color
         self.counter = 0
-        possible_coordinates = [(x, y) for x in range(self.screen_size[0]) for y in range(self.screen_size[1])]
+        #TODO: possible to make this more efficient (in larger domains it's wasteful computation)
+        possible_coordinates = [(x, y) for x in range(self.grid_size[0]) for y in range(self.grid_size[1])]
         coord_pool = random.sample(possible_coordinates, 3)
         self.agent = coord_pool[0]
         self.fire = coord_pool[1]
         self.water = coord_pool[2]
         self.has_water = False
-        self.grid = self.grab_screen()
 
 
     def grab_screen(self):
         """current screen of the game
         returns: numpy nd-array of shape screen_size"""
-        self.grid = self.counter*np.zeros(self.screen_size)
-        self.grid[self.agent[0]][self.agent[1]] = self.agent_water_color if self.has_water else self.agent_color
-        self.grid[self.water[0]][self.water[1]] = self.agent_water_color if self.has_water else self.water_color
-        self.grid[self.fire[0]][self.fire[1]] = self.fire_color
-        # print(self.grid)
-        return self.grid
+        #TODO: possible to make this more efficient by not generating a new array every time grab_screen is called.
+        self.screen = self.counter*np.zeros(self.screen_size)
+        #set color of agent location
+        _color = self.agent_water_color if self.has_water else self.agent_color
+        self.screen[self.agent[0]*self.grid_to_pixel:(self.agent[0]+1)*self.grid_to_pixel,
+                    self.agent[1]*self.grid_to_pixel:(self.agent[1]+1)*self.grid_to_pixel] = self.agent_water_color if self.has_water else self.agent_color
+        #set color of water location
+        _color = self.agent_water_color if self.has_water else self.water_color
+        self.screen[self.water[0]*self.grid_to_pixel:(self.water[0]+1)*self.grid_to_pixel,
+                    self.water[1]*self.grid_to_pixel:(self.water[1]+1)*self.grid_to_pixel] = self.agent_water_color if self.has_water else self.agent_color
+        #set color of fire
+        self.screen[self.fire[0]*self.grid_to_pixel:(self.fire[0]+1)*self.grid_to_pixel,
+                    self.fire[1]*self.grid_to_pixel:(self.fire[1]+1)*self.grid_to_pixel] = self.fire_color
+        plt.imshow(self.screen)
+        plt.show()
+        return self.screen
 
     def get_dims(self):
         """row and column of screen in pixels"""
@@ -75,11 +88,11 @@ class fire_fighter(object):
             if a == 0:
                 self.agent = (self.agent[0], self.agent[1] - 1) if self.agent[1] > 0 else self.agent
             elif a == 1:
-                self.agent = (self.agent[0], self.agent[1] + 1) if self.agent[1] < self.screen_size[1] - 1 else self.agent
+                self.agent = (self.agent[0], self.agent[1] + 1) if self.agent[1] < self.grid_size[1] - 1 else self.agent
             elif a == 2:
                 self.agent = (self.agent[0] - 1, self.agent[1]) if self.agent[0] > 0 else self.agent
             elif a == 3:
-                self.agent = (self.agent[0] + 1, self.agent[1]) if self.agent[0] < self.screen_size[0] - 1 else self.agent
+                self.agent = (self.agent[0] + 1, self.agent[1]) if self.agent[0] < self.grid_size[0] - 1 else self.agent
 
 
             if self.has_water:
@@ -111,4 +124,24 @@ class fire_fighter(object):
     def isLegal(self, coord):
         x = coord[0]
         y = coord[1]
-        return 0 <= x < self.screen_size[0] and 0 <= y < self.screen_size[1]
+        return 0 <= x < self.grid_size[0] and 0 <= y < self.grid_size[1]
+
+
+def main():
+     """
+     Test Method - wasd to move. z to pickup, x to drop, l to end.
+     """
+     fighter = fire_fighter(game_params)
+     print("New Instance: Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water)
+     inp = None
+     while (inp != "l" and not fighter.isTerminal()):
+         inp = raw_input("Input: ")
+         mapping = {"a": 0, "d": 1, "w": 2, "s": 3, "z": 4, "x": 5}
+         if inp in mapping:
+             fighter.execute_action(mapping[inp])
+         else:
+             print("Illegal")
+         # print("Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water, " Has Water: ", fighter.has_water)
+
+if __name__ == "__main__":
+     main()
