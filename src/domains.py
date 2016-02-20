@@ -37,7 +37,7 @@ class fire_fighter(object):
         """current screen of the game
         returns: numpy nd-array of shape screen_size"""
         #TODO: possible to make this more efficient by not generating a new array every time grab_screen is called.
-        self.screen = self.counter*np.zeros(self.screen_size)
+        self.screen = self.counter*np.zeros(self.screen_size + [3])
         #set color of agent location
         _color = self.agent_water_color if self.has_water else self.agent_color
         for _ in range(3):
@@ -54,8 +54,8 @@ class fire_fighter(object):
         for _ in range(3):
             self.screen[self.fire[0]*self.grid_to_pixel:(self.fire[0]+1)*self.grid_to_pixel,
                         self.fire[1]*self.grid_to_pixel:(self.fire[1]+1)*self.grid_to_pixel, _] = self.fire_color[_]
-        plt.imshow(self.screen)
-        plt.show()
+        # plt.imshow(self.screen)
+        # plt.show()
         return self.screen
 
     def get_dims(self):
@@ -132,21 +132,21 @@ class fire_fighter(object):
         return 0 <= x < self.grid_size[0] and 0 <= y < self.grid_size[1]
 
 
-def main():
-     """
-     Test Method - wasd to move. z to pickup, x to drop, l to end.
-     """
-     fighter = fire_fighter(game_params)
-     print("New Instance: Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water)
-     inp = None
-     while (inp != "l" and not fighter.isTerminal()):
-         inp = raw_input("Input: ")
-         mapping = {"a": 0, "d": 1, "w": 2, "s": 3, "z": 4, "x": 5}
-         if inp in mapping:
-             fighter.execute_action(mapping[inp])
-         else:
-             print("Illegal")
-         # print("Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water, " Has Water: ", fighter.has_water)
-
-if __name__ == "__main__":
-     main()
+# def main():
+#      """
+#      Test Method - wasd to move. z to pickup, x to drop, l to end.
+#      """
+#      fighter = fire_fighter(game_params)
+#      print("New Instance: Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water)
+#      inp = None
+#      while (inp != "l" and not fighter.isTerminal()):
+#          inp = raw_input("Input: ")
+#          mapping = {"a": 0, "d": 1, "w": 2, "s": 3, "z": 4, "x": 5}
+#          if inp in mapping:
+#              fighter.execute_action(mapping[inp])
+#          else:
+#              print("Illegal")
+#          # print("Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water, " Has Water: ", fighter.has_water)
+#
+# if __name__ == "__main__":
+#      main()
