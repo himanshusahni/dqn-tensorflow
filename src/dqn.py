@@ -14,8 +14,7 @@ class dqn(object):
     """deep q learning agent for arbitrary domains."""
     def __init__(self, sess, gameworld):
         super(dqn, self).__init__()
-        #tensorflow session
-        self.sess = sess
+        self.sess = sess    #tensorflow session
 
         #agent parameters
         agent_params = params.agent_params
@@ -36,8 +35,8 @@ class dqn(object):
         self.batch_size = params.net_params.batch_size
 
         #create experience buffer
-        self.experience = tf.RandomShuffleQueue(self.replay_memory,
-                                    self.min_replay, dtypes=(tf.float32, tf.int32, tf.float32, tf.float32, tf.bool),
+        self.experience = tf.RandomShuffleQueue(self.replay_memory, self.min_replay,
+                                    dtypes=(tf.float32, tf.int32, tf.float32, tf.float32, tf.bool),
                                     #state(rows,cols,history), action, reward, next_state(rows,cols,history), terminal
                                     shapes = ([self.img_height, self.img_width, self.history], [self.num_actions], [], [self.img_height, self.img_width, self.history], []),
                                     name = 'experience_replay')
@@ -55,6 +54,7 @@ class dqn(object):
 
         #set up convnet
         net_params = params.net_params
+        self.clip_delta = net_params.clip_delta
         net_params.output_dims = self.num_actions
         net_params.history = self.history
         net_params.img_size = self.img_size
@@ -64,10 +64,11 @@ class dqn(object):
             self.train_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=True)
         with tf.variable_scope("target") as self.target_scope:
             self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
+
         #ops to train network
         self.opt = tf.train.GradientDescentOptimizer(learning_rate=net_params.lr)
 
-    def perceive(self):
+    def perceive(self, random = False):
         """
         method for collecting game playing experience. Can be run multithreaded with
         different game sessions. Enqueues all sessions to a RandomShuffleQueue
@@ -75,8 +76,11 @@ class dqn(object):
         try:
             #pick best action according to convnet on current state
             action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(self.state, axis=0)})
-            # max_a = np.argmax(action_values)
-            max_a = np.random.randint(0,5)
+            if random:
+                max_a = np.random.randint(0,self.num_actions - 1)
+            else:
+                max_a = np.argmax(action_values)
+
             #execute that action in the environment,
             (next_state, reward, terminal) = self.env.take_action(max_a)
             action_one_hot = np.zeros(self.num_actions, dtype='int32')
@@ -129,7 +133,9 @@ class dqn(object):
             #get loss
             loss = tf.square(targets)
             #create the gradient descent op
-            self.opt_op = self.opt.minimize(loss)
+            grads_and_vars = self.opt.compute_gradients(loss)
+            capped_grads_and_vars = [(tf.clip_by_value(g, -self.clip_delta, self.clip_delta), v) for g, v in grads_and_vars]    #gradient capping
+            self.opt_op = self.opt.apply_gradients(capped_grads_and_vars)
             return self.opt_op
 
         except Exception as e:
@@ -143,12 +149,23 @@ if __name__ == "__main__":
     sess.run(tf.initialize_all_variables())
     train_op = agent.qLearnMinibatch()
     steps = 0
+
     with sess.as_default():
-        while(steps < 1000):
-            agent.perceive()
-            steps+= 1
-        print "DONE PERCEIVING"
-        while (steps > 80):
+        #run 10,000 steps in the beginning random
+        print "STARTING RANDOM INITIALIZATIONS"
+        while(steps < params.agent_params.learn_start):
+            agent.perceive(True)
+            steps += 1
+        print "DONE RANDOM PLAY"
+        while(steps < params.agent_params.steps):
+            #copy over target network if needed
+            if steps % params.agent_params.target_q == 0:
+                print "COPYING TARGET NETWORK OVER AT " + str(steps)
+                agent.target_net.copy_weights(agent.train_net.var_dir, sess)
+            #perceive batch_size number of times
+            for p in range(params.net_params.batch_size):
+                agent.perceive()
+                steps+= 1
+            #train a minibatch
             sess.run(train_op)
-            # agent.target_net.copy_weights(agent.train_net.var_dir, sess)
-            steps-=params.net_params.batch_size
+            print(steps)

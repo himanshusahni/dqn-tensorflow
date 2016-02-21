@@ -7,8 +7,7 @@ class Environment(object):
     def __init__(self, game):
         #game parameters
         self.game = game(params.game_params)
-        self.img_size = game.get_dims()
-        #history
+        self.img_size = self.game.get_dims()
         self.history = params.agent_params.history
         self.screen_history = deque(maxlen=self.history)
 
