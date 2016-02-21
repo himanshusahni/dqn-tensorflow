@@ -4,6 +4,7 @@ import threading
 import sys
 import time
 import matplotlib.pyplot as plt
+import random
 
 import params
 import game_env
@@ -24,6 +25,10 @@ class dqn(object):
         self.min_replay = agent_params.min_replay           #min length of memory queue
         self.history = agent_params.history                 #no. of frames of memory in state
         self.gamma = agent_params.gamma
+        self.ep = agent_params.ep
+        self.ep_delta = (agent_params.ep - agent_params.ep_end)/(agent_params.ep_endt - agent_params.learn_start)
+        print self.ep_delta
+        self.learn_start = agent_params.learn_start
 
         #create game environments and gameplaying threads
         self.env = game_env.Environment(gameworld)
@@ -68,7 +73,7 @@ class dqn(object):
         #ops to train network
         self.opt = tf.train.GradientDescentOptimizer(learning_rate=net_params.lr)
 
-    def perceive(self, random = False):
+    def perceive(self, valid = False):
         """
         method for collecting game playing experience. Can be run multithreaded with
         different game sessions. Enqueues all sessions to a RandomShuffleQueue
@@ -76,15 +81,20 @@ class dqn(object):
         try:
             #pick best action according to convnet on current state
             action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(self.state, axis=0)})
-            if random:
-                max_a = np.random.randint(0,self.num_actions - 1)
+            max_a = np.argmax(action_values)
+            max_a = np.random.randint(0,self.num_actions - 1)
+            #e-greedy action selection
+            if self.env.game.counter > self.learn_start:
+                self.ep -= self.ep_delta    #anneal epsilon
+            if (random.random() < self.ep):
+                chosen_a = np.random.randint(0,self.num_actions - 1)
             else:
-                max_a = np.argmax(action_values)
+                chosen_a = max_a
 
             #execute that action in the environment,
-            (next_state, reward, terminal) = self.env.take_action(max_a)
+            (next_state, reward, terminal) = self.env.take_action(chosen_a)
             action_one_hot = np.zeros(self.num_actions, dtype='int32')
-            action_one_hot[max_a] = 1
+            action_one_hot[chosen_a] = 1
             #insert into queue
             self.sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: self.state,
                                                           self.action_placeholder: action_one_hot,
@@ -154,7 +164,7 @@ if __name__ == "__main__":
         #run 10,000 steps in the beginning random
         print "STARTING RANDOM INITIALIZATIONS"
         while(steps < params.agent_params.learn_start):
-            agent.perceive(True)
+            agent.perceive()
             steps += 1
         print "DONE RANDOM PLAY"
         while(steps < params.agent_params.steps):
@@ -168,4 +178,3 @@ if __name__ == "__main__":
                 steps+= 1
             #train a minibatch
             sess.run(train_op)
-            print(steps)
