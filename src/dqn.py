@@ -27,7 +27,7 @@ class dqn(object):
         self.gamma = agent_params.gamma
 
         #create game environments and gameplaying threads
-        self.env = game_env.Environment(gameworld(params.game_params), agent_params)
+        self.env = game_env.Environment(gameworld)
         self.state = self.env.new_game()
         self.img_size = self.env.get_img_size()
         (self.img_height, self.img_width) = self.img_size

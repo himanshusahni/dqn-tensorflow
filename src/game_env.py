@@ -1,16 +1,15 @@
 from collections import deque
 import numpy as np
-import domains
 import params
 
 class Environment(object):
     """Shell for simplyfying certain tasks for agent"""
-    def __init__(self, game, params):
+    def __init__(self, game):
         #game parameters
-        self.game = game
+        self.game = game(params.game_params)
         self.img_size = game.get_dims()
         #history
-        self.history = params.history
+        self.history = params.agent_params.history
         self.screen_history = deque(maxlen=self.history)
 
     def flush_history(self):
