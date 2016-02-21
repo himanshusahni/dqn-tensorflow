@@ -12,12 +12,12 @@ class Environment(object):
         #history
         self.history = params.history
         self.screen_history = deque(maxlen=self.history)
-        self.flush_history()
 
     def flush_history(self):
         """fill history buffer with zeros"""
         for _ in range(self.screen_history.maxlen):
             self.screen_history.append(np.expand_dims(np.zeros(self.img_size), -1))
+
     def get_actions(self):
         return self.game.actions
 
@@ -67,11 +67,13 @@ class Environment(object):
         ycbcr[:,:,2] = 0.5 +.5*rgb_array[:,:,0] - .418688*rgb_array[:,:,1] - .081312*rgb_array[:,:,2]
         return ycbcr
 
-# g = Environment(domains.fire_fighter(params.game_params), params.agent_params)
-# print g.take_action(5)
-# print g.take_action(5)
-# print g.take_action(5)
-# print g.new_game()
-# print g.take_action(5)
-# print g.take_action(5)
-# print g.take_action(5)
+if __name__ == "__main__":
+    g = Environment(domains.fire_fighter(params.game_params), params.agent_params)
+    g.new_game()
+    print g.take_action(5)
+    print g.take_action(5)
+    print g.take_action(5)
+    print g.new_game()
+    print g.take_action(5)
+    print g.take_action(5)
+    print g.take_action(5)

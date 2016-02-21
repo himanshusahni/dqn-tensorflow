@@ -3,6 +3,7 @@ import numpy as np
 import threading
 import sys
 import time
+import matplotlib.pyplot as plt
 
 import params
 import game_env
@@ -27,7 +28,7 @@ class dqn(object):
 
         #create game environments and gameplaying threads
         self.env = game_env.Environment(gameworld(params.game_params), agent_params)
-        self.state = self.env.get_state()
+        self.state = self.env.new_game()
         self.img_size = self.env.get_img_size()
         (self.img_height, self.img_width) = self.img_size
         self.available_actions = self.env.get_actions()
@@ -74,8 +75,8 @@ class dqn(object):
         try:
             #pick best action according to convnet on current state
             action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(self.state, axis=0)})
-            max_a = np.argmax(action_values)
-            # max_a = np.random.randint(0,3)
+            # max_a = np.argmax(action_values)
+            max_a = np.random.randint(0,5)
             #execute that action in the environment,
             (next_state, reward, terminal) = self.env.take_action(max_a)
             action_one_hot = np.zeros(self.num_actions, dtype='int32')
@@ -135,26 +136,19 @@ class dqn(object):
             print e
 
 
-#create session and agent
-sess = tf.Session()
-agent = dqn(sess, domains.fire_fighter)
-sess.run(tf.initialize_all_variables())
-train_op = agent.qLearnMinibatch()
-steps = 0
-with sess.as_default():
-    while(steps < 100):
-        agent.perceive()
-        steps+= 1
-    while (steps > 80):
-        print sess.run(train_op)
-        agent.target_net.copy_weights(agent.train_net.var_dir, sess)
-        steps-=params.net_params.batch_size
-
-# agent.coord.request_stop()
-# agent.coord.join(enqueue_threads)
-# for i in range(64):
-#     print "iter " + str(i)
-#     if agent.coord.should_stop():
-#         break
-#     print sess.run(agent.train())
-#     print state.get_shape()
+if __name__ == "__main__":
+    #create session and agent
+    sess = tf.Session()
+    agent = dqn(sess, domains.fire_fighter)
+    sess.run(tf.initialize_all_variables())
+    train_op = agent.qLearnMinibatch()
+    steps = 0
+    with sess.as_default():
+        while(steps < 1000):
+            agent.perceive()
+            steps+= 1
+        print "DONE PERCEIVING"
+        while (steps > 80):
+            sess.run(train_op)
+            # agent.target_net.copy_weights(agent.train_net.var_dir, sess)
+            steps-=params.net_params.batch_size

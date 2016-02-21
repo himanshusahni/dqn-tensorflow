@@ -36,6 +36,7 @@ class fire_fighter(object):
         self.fire = coord_pool[1]
         self.water = coord_pool[2]
         self.has_water = False
+        # print("Agent: " , self.agent, "Fire: ", self.fire , " Water: ", self.water, " Has Water: ", self.has_water)
 
 
     def grab_screen(self):
@@ -135,21 +136,21 @@ class fire_fighter(object):
         return 0 <= x < self.grid_size[0] and 0 <= y < self.grid_size[1]
 
 
-# def main():
-#      """
-#      Test Method - wasd to move. z to pickup, x to drop, l to end.
-#      """
-#      fighter = fire_fighter(game_params)
-#      print("New Instance: Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water)
-#      inp = None
-#      while (inp != "l" and not fighter.isTerminal()):
-#          inp = raw_input("Input: ")
-#          mapping = {"a": 0, "d": 1, "w": 2, "s": 3, "z": 4, "x": 5}
-#          if inp in mapping:
-#              fighter.execute_action(mapping[inp])
-#          else:
-#              print("Illegal")
-#          # print("Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water, " Has Water: ", fighter.has_water)
-#
-# if __name__ == "__main__":
-#      main()
+def main():
+     """
+     Test Method - wasd to move. z to pickup, x to drop, l to end.
+     """
+     fighter = fire_fighter(game_params)
+     print("New Instance: Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water)
+     inp = None
+     while (inp != "l" and not fighter.isTerminal()):
+         inp = raw_input("Input: ")
+         mapping = {"a": 0, "d": 1, "w": 2, "s": 3, "z": 4, "x": 5}
+         if inp in mapping:
+             fighter.execute_action(mapping[inp])
+         else:
+             print("Illegal")
+         # print("Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water, " Has Water: ", fighter.has_water)
+
+if __name__ == "__main__":
+     main()
