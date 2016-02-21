@@ -23,7 +23,12 @@ class fire_fighter(object):
         self.water_color = params.water_color
         self.fire_color = params.fire_color
         self.agent_water_color = params.agent_water_color
-        self.counter = 0
+        #initialize domain
+        self.reset()
+        self.counter = 0    #set step counter
+
+    def reset(self):
+        """initialize locations of agent, fire and water"""
         #TODO: possible to make this more efficient (in larger domains it's wasteful computation)
         possible_coordinates = [(x, y) for x in range(self.grid_size[0]) for y in range(self.grid_size[1])]
         coord_pool = random.sample(possible_coordinates, 3)
@@ -42,7 +47,7 @@ class fire_fighter(object):
         _color = self.agent_water_color if self.has_water else self.agent_color
         for _ in range(3):
             self.screen[self.agent[0]*self.grid_to_pixel:(self.agent[0]+1)*self.grid_to_pixel,
-                        self.agent[1]*self.grid_to_pixel:(self.agent[1]+1)*self.grid_to_pixel, _] = _color[_]
+                        self.agent[1]*self.grid_to_pixel:(self.agent[1]+1)*self.grid_to_pixel, _] =  _color[_]
 
         #set color of water location
         _color = self.agent_water_color if self.has_water else self.water_color
@@ -54,8 +59,6 @@ class fire_fighter(object):
         for _ in range(3):
             self.screen[self.fire[0]*self.grid_to_pixel:(self.fire[0]+1)*self.grid_to_pixel,
                         self.fire[1]*self.grid_to_pixel:(self.fire[1]+1)*self.grid_to_pixel, _] = self.fire_color[_]
-        # plt.imshow(self.screen)
-        # plt.show()
         return self.screen
 
     def get_dims(self):

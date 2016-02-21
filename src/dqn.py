@@ -86,8 +86,12 @@ class dqn(object):
                                                           self.reward_placeholder: reward,
                                                           self.next_state_placeholder: next_state,
                                                           self.terminal_placeholder: terminal})
-            #update current state
-            self.state = next_state
+            #start a new game if terminal
+            if terminal:
+                self.state = self.env.new_game()
+            else:
+                #update current state
+                self.state = next_state
         except Exception as e:
             print e
 

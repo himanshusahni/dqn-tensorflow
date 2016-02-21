@@ -11,10 +11,13 @@ class Environment(object):
         self.img_size = game.get_dims()
         #history
         self.history = params.history
-        self.screen_history = deque(maxlen=self.history + 1)
+        self.screen_history = deque(maxlen=self.history)
+        self.flush_history()
+
+    def flush_history(self):
+        """fill history buffer with zeros"""
         for _ in range(self.screen_history.maxlen):
             self.screen_history.append(np.expand_dims(np.zeros(self.img_size), -1))
-
     def get_actions(self):
         return self.game.actions
 
@@ -24,9 +27,21 @@ class Environment(object):
     def get_img_size(self):
         return self.img_size
 
+    def new_game(self):
+        """reset the domain to start new episode and prepare the history"""
+        self.game.reset()
+        #flush history
+        self.flush_history()
+        #grab new screen and add to history
+        screen = self.game.grab_screen()
+        #preprocess screen
+        screen = self.preprocess(screen)
+        self.screen_history.append(screen)
+        return self.get_state()
+
     def get_state(self):
         """current state of the agent in the game (concatenation of the last self.history frames)"""
-        return np.concatenate([self.screen_history[hist] for hist in range(-1, -1-self.history, -1)], axis=2)
+        return np.concatenate([self.screen_history[hist] for hist in range(0, self.history)], axis=2)
 
     def take_action(self, a):
         """take the action in the game, update history and return new state, reward and terminal"""
@@ -53,4 +68,10 @@ class Environment(object):
         return ycbcr
 
 # g = Environment(domains.fire_fighter(params.game_params), params.agent_params)
-# print g.take_action(1)
+# print g.take_action(5)
+# print g.take_action(5)
+# print g.take_action(5)
+# print g.new_game()
+# print g.take_action(5)
+# print g.take_action(5)
+# print g.take_action(5)
