@@ -10,6 +10,7 @@ class Environment(object):
         self.img_size = self.game.get_dims()
         self.history = params.agent_params.history
         self.screen_history = deque(maxlen=self.history)
+        self.counter = 0    #keeps track of number of steps taken in domain
 
     def flush_history(self):
         """fill history buffer with zeros"""
@@ -41,13 +42,15 @@ class Environment(object):
         """current state of the agent in the game (concatenation of the last self.history frames)"""
         return np.concatenate([self.screen_history[hist] for hist in range(0, self.history)], axis=2)
 
-    def take_action(self, a):
+    def take_action(self, a, valid):
         """take the action in the game, update history and return new state, reward and terminal"""
         #get new game screen
         (screen, reward, terminal) = self.game.execute_action(a)
         #preprocess screen
         screen = self.preprocess(screen)
         self.screen_history.append(screen)
+        if not valid:
+            self.counter += 1
         return (self.get_state(), reward, terminal)
 
     def preprocess(self, screen):

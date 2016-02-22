@@ -25,7 +25,6 @@ class fire_fighter(object):
         self.agent_water_color = params.agent_water_color
         #initialize domain
         self.reset()
-        self.counter = 0    #set step counter
 
     def reset(self):
         """initialize locations of agent, fire and water"""
@@ -43,7 +42,7 @@ class fire_fighter(object):
         """current screen of the game
         returns: numpy nd-array of shape screen_size"""
         #TODO: possible to make this more efficient by not generating a new array every time grab_screen is called.
-        self.screen = self.counter*np.zeros(self.screen_size + [3])
+        self.screen = np.zeros(self.screen_size + [3])
         #set color of agent location
         _color = self.agent_water_color if self.has_water else self.agent_color
         for _ in range(3):
@@ -74,7 +73,6 @@ class fire_fighter(object):
                  float32: reward for executing given action
                  boolean: whether the new state is a terminal state or not
         """
-        self.counter += 1
         reward = 0
         if a == 4 or a == 5: #same square
 
