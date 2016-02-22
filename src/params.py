@@ -18,19 +18,19 @@ class agent_params(object):
     num_gameplay_threads = 4            #unused in serial
     history              = 3            #frames stored in history buffer
     gamma                = 0.99         #discount factor
-    target_q             = 1000         #frequency of copying training network
-    learn_start          = 1000         #steps of random play in beginning
+    target_q             = 10000         #frequency of copying training network
+    learn_start          = 50000         #steps of random play in beginning
     replay_memory        = 100000       #maximum number of states in replay
     min_replay           = 1000         #minimum number of states in replay
-    steps                = 10000        #maximum training steps
+    steps                = 500000        #maximum training steps
     ep                   = 1.0          #starting epsilon
     ep_end               = 0.1          #final epsilon
-    ep_endt              = 100000       #number of steps after which epsilon stops annealing
+    ep_endt              = 300000       #number of steps after which epsilon stops annealing
     valid_ep             = 0.05         #epsilon for validation runs
-    valid_start          = 1000         #steps after which validation starts
+    valid_start          = 50000         #steps after which validation starts
     valid_episodes       = 10           #number of episodes validation run averaged over
-    valid_freq           = 1000         #frequency of validations
-    save_freq            = 1000        #frequency of saving convnets
+    save_freq            = 20000        #frequency of saving convnet
+    valid_freq           = 10000         #frequency of validations
 
 class game_params:
     grid_size         = [5,5]
