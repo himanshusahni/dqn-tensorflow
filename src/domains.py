@@ -75,7 +75,6 @@ class fire_fighter(object):
         """
         reward = 0
         if a == 4 or a == 5: #same square
-
             if self.agent == self.water: #on water or has water
 
                 if self.has_water: #can drop
@@ -109,6 +108,10 @@ class fire_fighter(object):
                 # print('Death.')
                 reward = -1 #negative reward
 
+            #TODO: turning into simple gridworld
+            if self.agent == self.water: #win
+                reward = 1
+
         return (self.grab_screen(), reward, self.isTerminal())
 
     def isTerminal(self):
@@ -116,7 +119,7 @@ class fire_fighter(object):
         Decides if terminal condition has been reached
         :return: True if water douses fire or agent walks into fire
         """
-        return ((self.fire == self.water) and not self.has_water) or (self.agent == self.fire)
+        return ((self.fire == self.water) and not self.has_water) or (self.agent == self.fire) or (self.agent == self.water)
 
     def isAdjacent(self, coord, check_coord):
         # print("Fire: ", coord)
