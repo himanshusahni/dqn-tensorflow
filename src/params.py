@@ -30,6 +30,8 @@ class agent_params(object):
     valid_start          = 1000         #steps after which validation starts
     valid_episodes       = 10           #number of episodes validation run averaged over
     valid_freq           = 1000         #frequency of validations
+    save_freq            = 1000        #frequency of saving convnets
+
 class game_params:
     grid_size         = [5,5]
     grid_to_pixel     = 6               #pixels per grid location

@@ -3,7 +3,6 @@ import numpy as np
 import threading
 import sys
 import time
-import matplotlib.pyplot as plt
 import random
 
 import params
@@ -170,6 +169,7 @@ if __name__ == "__main__":
     train_op = agent.qLearnMinibatch()
     merged = tf.merge_all_summaries()
     writer = tf.train.SummaryWriter("./logs", sess.graph_def)
+    saver = tf.train.Saver()
     steps = 0
 
     with sess.as_default():
@@ -198,6 +198,9 @@ if __name__ == "__main__":
                         avg_r += ep_r
                     avg_r /= params.agent_params.valid_episodes
                     print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
+                if (steps % params.agent_params.save_freq == 0):
+                    print "SAVING MODEL AFTER " + str(steps) + " ..."
+                    saver.save(sess, "./models/model", global_step = steps)
                 #perceive batch_size number of times
                 agent.perceive()
                 steps+= 1
