@@ -154,6 +154,8 @@ class dqn(object):
             #create the gradient descent op
             grads_and_vars = self.opt.compute_gradients(loss)
             capped_grads_and_vars = [(tf.clip_by_value(g, -self.clip_delta, self.clip_delta), v) for g, v in grads_and_vars]    #gradient capping
+            #save gradients
+            gradient_summaries = [tf.histogram_summary("grad - " + v.name, g) for g, v in capped_grads_and_vars]
             self.opt_op = self.opt.apply_gradients(capped_grads_and_vars)
             return self.opt_op
 
@@ -181,26 +183,29 @@ if __name__ == "__main__":
         print "DONE RANDOM PLAY"
         while(steps < params.agent_params.steps):
             for p in range(params.net_params.batch_size):
-                #copy over target network if needed
-                if steps % params.agent_params.target_q == 0:
-                    print "COPYING TARGET NETWORK OVER AT " + str(steps)
-                    agent.target_net.copy_weights(agent.train_net.var_dir, sess)
-                if (steps > params.agent_params.valid_start) and (steps % params.agent_params.valid_freq == 0):
-                    print "Starting a validation run!"
-                    agent.requestNewGame()  #terminate current game and set up a new validation game
-                    avg_r = 0.0
-                    for v_episodes in range(params.agent_params.valid_episodes):
-                        ep_r = 0.0
-                        terminal = False
-                        while not terminal:
-                            r, terminal = agent.perceive(valid = True)
-                            ep_r += r
-                        avg_r += ep_r
-                    avg_r /= params.agent_params.valid_episodes
-                    print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
-                if (steps % params.agent_params.save_freq == 0):
-                    print "SAVING MODEL AFTER " + str(steps) + " ..."
-                    saver.save(sess, "./models/model", global_step = steps)
+                if steps > params.agent_params.learn_start:
+                    #copy over target network if needed
+                    if steps % params.agent_params.target_q == 0:
+                        print "COPYING TARGET NETWORK OVER AT " + str(steps)
+                        agent.target_net.copy_weights(agent.train_net.var_dir, sess)
+                    #validate!
+                    if (steps > params.agent_params.valid_start) and (steps % params.agent_params.valid_freq == 0):
+                        print "Starting a validation run!"
+                        agent.requestNewGame()  #terminate current game and set up a new validation game
+                        avg_r = 0.0
+                        for v_episodes in range(params.agent_params.valid_episodes):
+                            ep_r = 0.0
+                            terminal = False
+                            while not terminal:
+                                r, terminal = agent.perceive(valid = True)
+                                ep_r += r
+                            avg_r += ep_r
+                        avg_r /= params.agent_params.valid_episodes
+                        print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
+                    #save
+                    if (steps % params.agent_params.save_freq == 0):
+                        print "SAVING MODEL AFTER " + str(steps) + " ..."
+                        saver.save(sess, "./models/model", global_step = steps)
                 #perceive batch_size number of times
                 agent.perceive()
                 steps+= 1
