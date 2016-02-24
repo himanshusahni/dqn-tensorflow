@@ -15,23 +15,23 @@ class net_params(object):
 
 class agent_params(object):
     """paramaters for agent behavior"""
-    num_gameplay_threads = 4            #unused in serial
+    num_gameplay_threads = 8            #unused in serial
     history              = 3            #frames stored in history buffer
     gamma                = 0.99         #discount factor
-    target_q             = 100         #frequency of copying training network
-    learn_start          = 500         #steps of random play in beginning
-    replay_memory        = 10000       #maximum number of states in replay
-    min_replay           = 1000         #minimum number of states in replay
-    steps                = 5000        #maximum training steps
+    target_q             = 20000         #frequency of copying training network
+    learn_start          = 10000         #steps of random play in beginning
+    replay_memory        = 1e6       #maximum number of states in replay
+    min_replay           = 10000         #minimum number of states in replay
+    steps                = 1e6        #maximum training steps
     ep                   = 1.0          #starting epsilon
     ep_end               = 0.1          #final epsilon
-    ep_endt              = 300000       #number of steps after which epsilon stops annealing
+    ep_endt              = 7e5       #number of steps after which epsilon stops annealing
     valid_ep             = 0.05         #epsilon for validation runs
-    valid_start          = 100         #steps after which validation starts
-    valid_episodes       = 1          #number of episodes validation run averaged over
-    save_freq            = 200        #frequency of saving convnet
-    valid_freq           = 100         #frequency of validations
-
+    valid_start          = 2e5         #steps after which validation starts
+    valid_episodes       = 20          #number of episodes validation run averaged over
+    save_freq            = 50000        #frequency of saving convnet
+    valid_freq           = 50000         #frequency of validations
+    log_freq             = 100          #frequency of logging loss and gradient histograms
 class game_params:
     grid_size         = [5,5]
     grid_to_pixel     = 6               #pixels per grid location

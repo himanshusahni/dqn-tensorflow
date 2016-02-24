@@ -197,14 +197,17 @@ if __name__ == "__main__":
         agent.start_playing()
         while not all(env.counter > params.agent_params.learn_start for env in agent.envs):
             time.sleep(1)
+            print "Size of history: " + str(sess.run(agent.experience.size()))
         print "DONE RANDOM PLAY"
         while(steps < params.agent_params.steps):
             #train a minibatch
             result = sess.run([merged,train_op])
-            summary_str = result[0]
-            writer.add_summary(summary_str, steps)
-            steps+= 1
-            print steps
+	    if steps % params.agent_params.log_freq == 0:
+            	summary_str = result[0]
+            	writer.add_summary(summary_str, steps)
+		print "Size of history: " + str(sess.run(agent.experience.size()))
+            	print "Training steps executed: " + str(steps)
+            steps += 1
             #copy over target network if needed
             if steps % params.agent_params.target_q == 0:
                 print "COPYING TARGET NETWORK OVER AT " + str(steps)
