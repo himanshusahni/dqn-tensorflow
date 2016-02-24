@@ -7,11 +7,12 @@ class ConvNetGenerator(object):
     """
     creates, initializes, and returns a convolutional neural network with given params.
     """
-    def __init__(self, params, _input):
+    def __init__(self, params, net_input, trainable):
         """
-        _input is a placeholder variable.
+        net_input is a placeholder variable.
         """
         super(ConvNetGenerator, self).__init__()
+        self.trainable = trainable     #whether the weights on this network will be trained
         self.input_shape = [None, params.img_height, params.img_width, params.history]  #batch of input images to net
         self.input_dims = self.input_shape[1]*self.input_shape[2]*self.input_shape[3]   #pixels in each image
         self.output_dims = params.output_dims
@@ -36,17 +37,45 @@ class ConvNetGenerator(object):
             raise TypeError("Size of fully connected units undefined")
         if not (self.full_connect_layers > 0):
             raise ValueError("At least one fully connected layer required!")
+        #store a dictionary to all weights in network
+        self.var_dir = {}
+        #scope under which the network was created
+        self.scope_name = tf.constant("dummy").name.rsplit('/',1)[0]
+        self.logits = self.inference(net_input)
 
-        self.logits = self.create_inference(_input)
 
-    def create_inference(self, _input):
+    def create_weights(self, shape):
+        """
+        creates weights with truncated normal initialization (mean = 0, stddev = 1.0)
+        currently created on highest priority available device (cpu or gpu)
+        """
+        return tf.get_variable('weights', shape,
+                        initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.001),
+                        trainable=self.trainable)
+
+    def create_bias(self, size):
+        """
+        creates bias vector of shape [size] filled with 0.1
+        """
+        return tf.get_variable('bias', [size],
+                                initializer=tf.constant_initializer(0.001),
+                                trainable=self.trainable)
+
+    def copy_weights(self, other_var_dir, sess):
+        """overwrite current set of weights with weights of another network"""
+        for (var_name, var) in other_var_dir.iteritems():
+            this_var_name = self.scope_name + '/' + var_name.split('/', 1)[1]
+            sess.run(self.var_dir[this_var_name].assign(var))
+
+
+    def inference(self, net_input):
         """
         Cnn with self.conv_layers convolutional layers and self.full_connect_layers fully
         connected layers. relu non-linearity after each conv layer. no max-pooling.
         """
-        outputs = [_input]
-        print "INPUT"
-        print outputs[-1].get_shape()
+        outputs = [net_input]
+        #print "INPUT"
+        #print outputs[-1].get_shape()
         for conv_layer in range(self.conv_layers):
             with tf.variable_scope('conv' + str(conv_layer)) as scope:
                 #create shape of convolutional weight matrix
@@ -58,16 +87,18 @@ class ConvNetGenerator(object):
                     out_channels = self.n_units[conv_layer]
                 shape = [self.filter_size[conv_layer], self.filter_size[conv_layer],
                         in_channels, out_channels]
-                print shape
+                #print shape
                 W = self.create_weights(shape)
                 conv = tf.nn.conv2d(outputs[-1], W, [1, self.filter_stride[conv_layer],
                                                         self.filter_stride[conv_layer],1], padding='SAME')
                 b = self.create_bias(out_channels)
+                self.var_dir[W.name] = W
+                self.var_dir[b.name] = b
                 bias = tf.nn.bias_add(conv, b)
                 conv = tf.nn.relu(bias, name=scope.name)
                 outputs.append(conv)
-                print "CONV" + str(conv_layer)
-                print outputs[-1].get_shape()
+                #print "CONV" + str(conv_layer)
+                #print outputs[-1].get_shape()
 
         last_conv = outputs[-1]
         dim = 1
@@ -75,8 +106,8 @@ class ConvNetGenerator(object):
             dim *= d
         reshape = tf.reshape(last_conv, [-1, dim], name='reshape')
         outputs.append(reshape)
-        print "RESHAPED"
-        print outputs[-1].get_shape()
+        #print "RESHAPED"
+        #print outputs[-1].get_shape()
         for connect_layer in range(self.full_connect_layers):
             with tf.variable_scope('hidden' + str(connect_layer)) as scope:
                 #find size of weight matrix
@@ -88,10 +119,12 @@ class ConvNetGenerator(object):
                 shape = [in_size, out_size]
                 W = self.create_weights(shape)
                 b = self.create_bias(out_size)
+                self.var_dir[W.name] = W
+                self.var_dir[b.name] = b
                 hidden = tf.nn.relu_layer(outputs[-1], W, b, name = scope.name)
                 outputs.append(hidden)
-                print "FULLY CONNECTED"
-                print outputs[-1].get_shape()
+                #print "FULLY CONNECTED"
+                #print outputs[-1].get_shape()
 
 
         #last linear layer connecting to outputs
@@ -101,24 +134,10 @@ class ConvNetGenerator(object):
             shape = [in_size, out_size]
             W = self.create_weights(shape)
             b = self.create_bias(out_size)
+            self.var_dir[W.name] = W
+            self.var_dir[b.name] = b
             hidden = tf.nn.bias_add(tf.matmul(outputs[-1], W), b)
             outputs.append(hidden)
-        print "LAST FULLY CONNECTED"
-        print outputs[-1].get_shape()
+        #print "LAST FULLY CONNECTED"
+        #print outputs[-1].get_shape()
         return outputs[-1]  #return linear activations of output
-
-
-
-    def create_weights(self, shape):
-        """
-        creates weights with truncated normal initialization (mean = 0, stddev = 1.0)
-        currently created on highest priority available device (cpu or gpu)
-        """
-        return tf.get_variable('weights', shape,
-                        initializer=tf.truncated_normal_initializer())
-
-    def create_bias(self, size):
-        """
-        creates bias vector of shape [size] filled with 0.1
-        """
-        return tf.get_variable('bias', [size], initializer=tf.constant_initializer(0.1))

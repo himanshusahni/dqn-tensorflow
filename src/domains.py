@@ -4,7 +4,6 @@ Test domains for deep transfer
 import numpy as np
 import random
 from collections import deque
-import matplotlib.pyplot as plt
 
 from params import game_params
 
