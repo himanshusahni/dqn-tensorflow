@@ -191,8 +191,10 @@ if __name__ == "__main__":
             #run 10,000 steps in the beginning random
             print "STARTING AGENT GAMEPLAY!"
             agent.start_playing()
-            while not all(env.counter > params.agent_params.learn_start for env in agent.envs):
+            num_hist = 0
+            while not (num_hist > params.agent_params.learn_start)
                 time.sleep(1)
+                num_hist = sess.run(agent.experience.size())
                 print "Size of history: " + str(sess.run(agent.experience.size()))
             print "DONE RANDOM PLAY"
             while(steps < params.agent_params.steps):
