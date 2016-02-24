@@ -186,12 +186,13 @@ if __name__ == "__main__":
     steps = 0
     valid_game = game_env.Environment(domains.fire_fighter, -1)
     hist_size_op = agent.experience.size()
+    num_hist = 0
     try:
         with sess.as_default():
             #run 10,000 steps in the beginning random
             print "STARTING AGENT GAMEPLAY!"
             agent.start_playing()
-            while not (num_hist > params.agent_params.learn_start)
+            while not (num_hist > params.agent_params.learn_start):
                 time.sleep(1)
                 num_hist = hist_size_op.eval()
                 print "Size of history: " + str(num_hist)
@@ -235,4 +236,4 @@ if __name__ == "__main__":
         print e
     finally:
         agent.coord.request_stop()
-        coord.join(threads)
+        agent.coord.join(agent.gameplay_threads)
