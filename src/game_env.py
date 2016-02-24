@@ -12,6 +12,7 @@ class Environment(object):
         self.history = params.agent_params.history
         self.screen_history = deque(maxlen=self.history)
         self.counter = 0    #keeps track of number of steps taken in domain
+        self.ep = params.agent_params.ep                           #starting exploration randomness
         self.new_game()
 
     def flush_history(self):

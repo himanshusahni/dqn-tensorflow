@@ -24,9 +24,9 @@ class dqn(object):
         self.min_replay = agent_params.min_replay           #min length of memory queue
         self.history = agent_params.history                 #no. of frames of memory in state
         self.gamma = agent_params.gamma                     #discount factor
-        self.ep = agent_params.ep                           #starting exploration randomness
         self.ep_delta = (agent_params.ep - agent_params.ep_end)/(agent_params.ep_endt - agent_params.learn_start)
         self.learn_start = agent_params.learn_start         #steps after which epsilon gets annealed
+        self.ep_endt = agent_params.ep_endt                 #steps after which epsilon stops annealing
         self.valid_ep = agent_params.valid_ep               #epsilon to use during validation runs
         self.num_gameplay_threads = agent_params.num_gameplay_threads
 
@@ -95,17 +95,15 @@ class dqn(object):
         """
         try:
             with sess.as_default():
-                # print "GAME COUNTER " + str(game.counter)
                 #pick best action according to convnet on current state
                 action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(game.get_state(), axis=0)})
-                # print "GAME COUNTER " + str(game.counter)
                 max_a = np.argmax(action_values)
                 # max_a = np.random.randint(0,self.num_actions - 1)
                 #e-greedy action selection
                 if not valid:
-                    if game.counter > self.learn_start:
-                        self.ep -= self.ep_delta    #anneal epsilon
-                    chosen_ep = self.ep
+                    if self.learn_start < game.counter < self.ep_endt:
+                        game.ep -= self.ep_delta    #anneal epsilon
+                    chosen_ep = game.ep
                 else:
                     chosen_ep = self.valid_ep
                 if (random.random() < chosen_ep):
@@ -127,9 +125,6 @@ class dqn(object):
                 #start a new game if terminal
                 if terminal:
                     game.new_game()
-
-                # print "GAME COUNTER " + str(game.counter)
-                # sys.stdout.flush()
                 return (reward, terminal)
         except Exception as e:
             print e
@@ -191,46 +186,52 @@ if __name__ == "__main__":
     steps = 0
     valid_game = game_env.Environment(domains.fire_fighter, -1)
 
-    with sess.as_default():
-        #run 10,000 steps in the beginning random
-        print "STARTING AGENT GAMEPLAY!"
-        agent.start_playing()
-        while not all(env.counter > params.agent_params.learn_start for env in agent.envs):
-            time.sleep(1)
-            print "Size of history: " + str(sess.run(agent.experience.size()))
-        print "DONE RANDOM PLAY"
-        while(steps < params.agent_params.steps):
-            #train a minibatch
-            result = sess.run([merged,train_op])
-	    if steps % params.agent_params.log_freq == 0:
-            	summary_str = result[0]
-            	writer.add_summary(summary_str, steps)
-		print "Size of history: " + str(sess.run(agent.experience.size()))
-            	print "Training steps executed: " + str(steps)
-            steps += 1
-            #copy over target network if needed
-            if steps % params.agent_params.target_q == 0:
-                print "COPYING TARGET NETWORK OVER AT " + str(steps)
-                agent.target_net.copy_weights(agent.train_net.var_dir, sess)
-            #validate!
-            if (steps >= params.agent_params.valid_start) and (steps % params.agent_params.valid_freq == 0):
-                print "Starting a validation run!"
-                valid_game.new_game()  #terminate current game and set up a new validation game
-                avg_r = 0.0
-                for v_episodes in range(params.agent_params.valid_episodes):
-                    print "RUNNING VALIDATION EPISODE " + str(v_episodes)
-                    ep_r = 0.0
-                    terminal = False
-                    ep_steps = 0
-                    while not terminal:
-                        ep_steps += 1
-                        r, terminal = agent.perceive(valid_game, sess, valid = True)
-                        ep_r += r
-                    print "EPISODE ENDED. EPISODE REWARD " + str(ep_r)
-                    avg_r += ep_r
-                avg_r /= params.agent_params.valid_episodes
-                print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
-            #save
-            if (steps % params.agent_params.save_freq == 0):
-                print "SAVING MODEL AFTER " + str(steps) + " ..."
-                saver.save(sess, "./models/model", global_step = steps)
+    try:
+        with sess.as_default():
+            #run 10,000 steps in the beginning random
+            print "STARTING AGENT GAMEPLAY!"
+            agent.start_playing()
+            while not all(env.counter > params.agent_params.learn_start for env in agent.envs):
+                time.sleep(1)
+                print "Size of history: " + str(sess.run(agent.experience.size()))
+            print "DONE RANDOM PLAY"
+            while(steps < params.agent_params.steps):
+                #train a minibatch
+                result = sess.run([merged,train_op])
+                if steps % params.agent_params.log_freq == 0:
+                    summary_str = result[0]
+                    writer.add_summary(summary_str, steps)
+                    print "Size of history: " + str(sess.run(agent.experience.size()))
+                    print "Training steps executed: " + str(steps)
+                steps += 1
+                #copy over target network if needed
+                if steps % params.agent_params.target_q == 0:
+                    print "COPYING TARGET NETWORK OVER AT " + str(steps)
+                    agent.target_net.copy_weights(agent.train_net.var_dir, sess)
+                #validate!
+                if (steps >= params.agent_params.valid_start) and (steps % params.agent_params.valid_freq == 0):
+                    print "Starting a validation run!"
+                    valid_game.new_game()  #terminate current game and set up a new validation game
+                    avg_r = 0.0
+                    for v_episodes in range(params.agent_params.valid_episodes):
+                        print "RUNNING VALIDATION EPISODE " + str(v_episodes)
+                        ep_r = 0.0
+                        terminal = False
+                        ep_steps = 0
+                        while not terminal:
+                            ep_steps += 1
+                            r, terminal = agent.perceive(valid_game, sess, valid = True)
+                            ep_r += r
+                        print "EPISODE ENDED. EPISODE REWARD " + str(ep_r)
+                        avg_r += ep_r
+                    avg_r /= params.agent_params.valid_episodes
+                    print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
+                #save
+                if (steps % params.agent_params.save_freq == 0):
+                    print "SAVING MODEL AFTER " + str(steps) + " ..."
+                    saver.save(sess, "./models/model", global_step = steps)
+    except Exception as e:
+        print e
+    finally:
+        agent.coord.request_stop()
+        coord.join(threads)
