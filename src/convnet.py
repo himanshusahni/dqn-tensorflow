@@ -42,7 +42,7 @@ class ConvNetGenerator(object):
         #scope under which the network was created
         self.scope_name = tf.constant("dummy").name.rsplit('/',1)[0]
         self.logits = self.inference(net_input)
-
+        self.create_weight_cp_ops()
 
     def create_weights(self, shape):
         """
@@ -62,10 +62,22 @@ class ConvNetGenerator(object):
                                 trainable=self.trainable)
 
     def copy_weights(self, other_var_dir, sess):
-        """overwrite current set of weights with weights of another network"""
-        for (var_name, var) in other_var_dir.iteritems():
-            this_var_name = self.scope_name + '/' + var_name.split('/', 1)[1]
-            sess.run(self.var_dir[this_var_name].assign(var))
+        for (other_var_name, other_var) in other_var_dir.iteritems():
+            var_name = self.scope_name + '/' + other_var_name.split('/', 1)[1]
+            other_var_eval = other_var.eval()
+            sess.run(self.weight_copy_ops[var_name], feed_dict={self.weight_placeholders[var_name]: other_var_eval})
+
+    def create_weight_cp_ops(self):
+        """
+        creates an op to overwrite current set of weights
+        with weights of another network
+        """
+        self.weight_placeholders = {}
+        for var_name in self.var_dir:
+            self.weight_placeholders[var_name] = tf.placeholder(tf.float32)
+        self.weight_copy_ops = {}
+        for (var_name, var_placeholder) in self.weight_placeholders.iteritems():
+            self.weight_copy_ops[var_name] = self.var_dir[var_name].assign(var_placeholder)
 
 
     def inference(self, net_input):
