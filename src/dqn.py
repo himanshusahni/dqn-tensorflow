@@ -185,17 +185,16 @@ if __name__ == "__main__":
     saver = tf.train.Saver()
     steps = 0
     valid_game = game_env.Environment(domains.fire_fighter, -1)
-
+    hist_size_op = agent.experience.size()
     try:
         with sess.as_default():
             #run 10,000 steps in the beginning random
             print "STARTING AGENT GAMEPLAY!"
             agent.start_playing()
-            num_hist = 0
             while not (num_hist > params.agent_params.learn_start)
                 time.sleep(1)
-                num_hist = sess.run(agent.experience.size())
-                print "Size of history: " + str(sess.run(agent.experience.size()))
+                num_hist = hist_size_op.eval()
+                print "Size of history: " + str(num_hist)
             print "DONE RANDOM PLAY"
             while(steps < params.agent_params.steps):
                 #train a minibatch
@@ -203,7 +202,7 @@ if __name__ == "__main__":
                 if steps % params.agent_params.log_freq == 0:
                     summary_str = result[0]
                     writer.add_summary(summary_str, steps)
-                    print "Size of history: " + str(sess.run(agent.experience.size()))
+                    print "Size of history: " + str(hist_size_op.eval())
                     print "Training steps executed: " + str(steps)
                 steps += 1
                 #copy over target network if needed
