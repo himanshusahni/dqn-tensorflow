@@ -95,9 +95,6 @@ class dqn(object):
         """
         try:
             with sess.as_default():
-                #pick best action according to convnet on current state
-                action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(game.get_state(), axis=0)})
-                max_a = np.argmax(action_values)
                 # max_a = np.random.randint(0,self.num_actions - 1)
                 #e-greedy action selection
                 if not valid:
@@ -109,6 +106,9 @@ class dqn(object):
                 if (random.random() < chosen_ep):
                     chosen_a = np.random.randint(0,self.num_actions - 1)
                 else:
+                    #pick best action according to convnet on current state
+                    action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(game.get_state(), axis=0)})
+                    max_a = np.argmax(action_values)
                     chosen_a = max_a
 
                 #execute that action in the environment,
