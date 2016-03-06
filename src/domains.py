@@ -194,5 +194,7 @@ def main():
          # print("Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water, " Has Water: ", fighter.has_water)
      gui.quit()
 
+     # TODO: add -d flag for display mode
+
 if __name__ == "__main__":
      main()
