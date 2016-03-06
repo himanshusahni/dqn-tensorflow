@@ -6,11 +6,11 @@ class display(object):
     # Defining colors
     BLACK = (0, 0, 0)
     WHITE = (255, 255, 255)
-    AGENT = 255 * [0,1,0]
-    WATER = 255 * [0,0,1]
-    FIRE = 255 * [1,0,0]
-    AGENT_W_WATER = 255 * [1, 1, 1]
-    AGENT_ON_WATER = 255 * [0.5, 0.5, 0.5]
+    AGENT = (0, 255, 0)
+    WATER = (0, 0, 0255)
+    FIRE = (255, 0, 0)
+    AGENT_W_WATER = (77, 77, 77)
+    AGENT_ON_WATER = (128, 128, 128)
 
     MARGIN = 5 # margin between each cell
 
@@ -52,13 +52,36 @@ class display(object):
         self.screen.fill(display.BLACK)
 
         print(screen_arr)
+        # # print(screen_arr[0])
+        # #print(screen_arr[1])
+        # print(screen_arr[2][0])
+
+        # agent = 1
+        # water = 2
+        # fire = 3
+        # if self.has_water:
+        #     agent = 12
+        #     water = 12
+        # elif self.agent in self.water:
+        #     agent = 21
 
         # Draw the grid
         for row in range(self.grid_size[0]):
             for column in range(self.grid_size[1]):
                 color = display.WHITE
-                if self.grid[row][column] == 1:
-                    color = display.GREEN
+                if screen_arr[row][column] == 1:
+                    color = display.AGENT
+                elif screen_arr[row][column] == 2:
+                    color = display.WATER
+                elif screen_arr[row][column] == 3:
+                    color = display.FIRE
+                elif screen_arr[row][column] == 12:
+                    color = display.AGENT_W_WATER
+                elif screen_arr[row][column] == 21:
+                    color = display.AGENT_ON_WATER
+
+
+
                 pygame.draw.rect(self.screen,
                                  color,
                                  [(display.MARGIN + self.WIDTH) * column + display.MARGIN,

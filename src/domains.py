@@ -44,28 +44,46 @@ class fire_fighter(object):
         returns: numpy nd-array of shape screen_size"""
         #TODO: possible to make this more efficient by not generating a new array every time grab_screen is called.
         self.screen = self.counter*np.zeros(self.screen_size)
-        #set color of agent location
-        _color = self.agent_water_color if self.has_water else self.agent_color
-        for _ in range(3):
-            self.screen[self.agent[0]*self.grid_to_pixel:(self.agent[0]+1)*self.grid_to_pixel,
-                        self.agent[1]*self.grid_to_pixel:(self.agent[1]+1)*self.grid_to_pixel, _] = _color[_]
+
+        #temp array to test display
+        self.disp_arr = self.counter*np.zeros(self.grid_size)
+        agent = 1
+        water = 2
+        fire = 3
+        if self.has_water:
+            agent = 12
+        elif self.agent in self.water:
+            agent = 21
 
         #set color of water location
         _color = self.agent_water_color if self.has_water else self.water_color
         for _ in range(3):
             for w in self.water:
+                if self.has_water and w == agent:
+                    water = 12
                 self.screen[w[0]*self.grid_to_pixel:(w[0]+1)*self.grid_to_pixel,
                         w[1]*self.grid_to_pixel:(w[1]+1)*self.grid_to_pixel, _] = _color[_]
+                self.disp_arr[w[0]][w[1]] = water
+                water = 2
+
+        #set color of agent location
+        _color = self.agent_water_color if self.has_water else self.agent_color
+        for _ in range(3):
+            self.screen[self.agent[0]*self.grid_to_pixel:(self.agent[0]+1)*self.grid_to_pixel,
+                        self.agent[1]*self.grid_to_pixel:(self.agent[1]+1)*self.grid_to_pixel, _] = _color[_]
+            self.disp_arr[self.agent[0]][self.agent[1]] = agent
+
 
         #set color of fire
         for _ in range(3):
             for f in self.fire:
                 self.screen[f[0]*self.grid_to_pixel:(f[0]+1)*self.grid_to_pixel,
                             f[1]*self.grid_to_pixel:(f[1]+1)*self.grid_to_pixel, _] = self.fire_color[_]
+                self.disp_arr[f[0]][f[1]] = fire
         # plt.imshow(self.screen)
         # plt.show()
         # toimage(self.screen).show()
-        return self.screen
+        return self.disp_arr
 
     def get_dims(self):
         """row and column of screen in pixels"""
@@ -95,9 +113,14 @@ class fire_fighter(object):
                                 adj_to_fire = coord
                         if adj_to_fire: #agent is adjacent to fire
                             # print('Dousing. Win.')
+                            print adj_to_fire
+                            self.water.remove(self.agent)
                             self.agent = adj_to_fire
-                            self.water.remove(self.fire) #TODO: handle properly
-                            reward = 1 #positive reward
+                            self.fire.remove(adj_to_fire)
+                            if not self.fire:
+                                print('Doused all fires')
+                                print("Terminal: ", self.isTerminal())
+                                reward = 1 #positive reward
                 else: #can pick
                     if a == 4:
                         # print('Picking Water Up')
@@ -117,10 +140,11 @@ class fire_fighter(object):
 
 
             if self.has_water:
-                self.water.add(self.agent)
+                self.water.append(self.agent)
 
             if self.agent in self.fire: #die
-                # print('Death.')
+                print('Death.')
+                print("Terminal: ", self.isTerminal())
                 reward = -1 #negative reward
 
         return (self.grab_screen(), reward, self.isTerminal())
@@ -130,7 +154,7 @@ class fire_fighter(object):
         Decides if terminal condition has been reached
         :return: True if water douses fire or agent walks into fire
         """
-        return ((set(self.fire) == set(self.water)) and not self.has_water) or (self.agent in self.fire)
+        return set(self.fire).issubset(set(self.water)) or (self.agent in self.fire)
 
     def isAdjacent(self, coord, check_coord):
         # print("Fire: ", coord)
@@ -154,6 +178,7 @@ def main():
      """
      fighter = fire_fighter(game_params)
      gui = display(fighter.grid_size, fighter.grid_to_pixel)
+     gui.draw(fighter.grab_screen())
      print("New Instance: Agent: " , fighter.agent, "Fire(s): ", fighter.fire , " Water(s): ", fighter.water)
      inp = None
      while (inp != "l" and not fighter.isTerminal()):
@@ -161,7 +186,7 @@ def main():
          mapping = {"a": 0, "d": 1, "w": 2, "s": 3, "z": 4, "x": 5}
          if inp in mapping:
              fighter.execute_action(mapping[inp])
-             gui.draw(fighter.screen)
+             gui.draw(fighter.disp_arr)
          elif inp == 'l':
              print("Quitting")
          else:
