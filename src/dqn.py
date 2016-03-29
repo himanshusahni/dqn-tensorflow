@@ -71,6 +71,11 @@ class dqn(object):
         with tf.variable_scope("target") as self.target_scope:
             self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
 
+        #create a copy of the training network with each game
+        for env in self.envs:
+            env.net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
+            self.broadcast_train_net(env, self.sess)
+
         #ops to train network
         self.opt = tf.train.GradientDescentOptimizer(learning_rate=net_params.lr)
 
@@ -82,10 +87,22 @@ class dqn(object):
         for thread in self.gameplay_threads:
             thread.start()
 
+    def broadcast_train_net(self, game, sess):
+        """
+        broadcasts the current training net to the given game
+        """
+        game.net.copy_weights(self.train_net.var_dir, sess)
+
     def game_driver(self, game, sess):
+        """
+        runs the thread
+        """
         with self.coord.stop_on_exception():
             while not self.coord.should_stop():
                 self.perceive(game, sess)
+                #copy over the training net values
+                if game.counter % params.target_q:
+                    self.broadcast_train_net(game, sess)
 
 
     def perceive(self, game, sess, valid = False):
@@ -107,7 +124,7 @@ class dqn(object):
                     chosen_a = np.random.randint(0,self.num_actions - 1)
                 else:
                     #pick best action according to convnet on current state
-                    action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(game.get_state(), axis=0)})
+                    action_values = game.net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(game.get_state(), axis=0)})
                     max_a = np.argmax(action_values)
                     chosen_a = max_a
 
