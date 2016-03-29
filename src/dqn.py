@@ -103,7 +103,7 @@ class dqn(object):
             while not self.coord.should_stop():
                 try:
                     #copy over the training net values
-                    if game.counter % params.agent_params.target_q:
+                    if game.counter % params.agent_params.target_q == 0:
                         self.broadcast_train_net(game, sess)
                     self.perceive(game, sess)
                 except Exception as e:
