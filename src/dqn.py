@@ -4,6 +4,7 @@ import threading
 import sys
 import time
 import random
+import traceback
 
 import params
 import game_env
@@ -72,9 +73,9 @@ class dqn(object):
             self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
 
         #create a copy of the training network with each game
-        for env in self.envs:
-            env.net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
-            self.broadcast_train_net(env, self.sess)
+        for (thread_num, env) in enumerate(self.envs):
+            with tf.variable_scope("game"+str(thread_num)):
+                env.net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
 
         #ops to train network
         self.opt = tf.train.GradientDescentOptimizer(learning_rate=net_params.lr)
@@ -91,7 +92,8 @@ class dqn(object):
         """
         broadcasts the current training net to the given game
         """
-        game.net.copy_weights(self.train_net.var_dir, sess)
+        with sess.as_default():
+            game.net.copy_weights(self.train_net.var_dir, sess)
 
     def game_driver(self, game, sess):
         """
@@ -99,10 +101,14 @@ class dqn(object):
         """
         with self.coord.stop_on_exception():
             while not self.coord.should_stop():
-                self.perceive(game, sess)
-                #copy over the training net values
-                if game.counter % params.target_q:
-                    self.broadcast_train_net(game, sess)
+                try:
+                    #copy over the training net values
+                    if game.counter % params.agent_params.target_q:
+                        self.broadcast_train_net(game, sess)
+                    self.perceive(game, sess)
+                except Exception as e:
+                    traceback.print_exc()
+                    sys.exit()
 
 
     def perceive(self, game, sess, valid = False):
@@ -144,7 +150,8 @@ class dqn(object):
                     game.new_game()
                 return (reward, terminal)
         except Exception as e:
-            print e
+            traceback.print_exc()
+            sys.exit()
 
 
     def getQUpdate(self, states, actions, rewards, next_states, terminals):
@@ -188,7 +195,8 @@ class dqn(object):
             return self.opt_op
 
         except Exception as e:
-            print e
+            traceback.print_exc()
+            sys.exit()
 
 
 if __name__ == "__main__":
@@ -250,7 +258,8 @@ if __name__ == "__main__":
                     print "SAVING MODEL AFTER " + str(steps) + " ..."
                     saver.save(sess, "./models/model", global_step = steps)
     except Exception as e:
-        print e
+        traceback.print_exc()
+        sys.exit()
     finally:
         agent.coord.request_stop()
         agent.coord.join(agent.gameplay_threads)
