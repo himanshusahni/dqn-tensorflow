@@ -12,6 +12,8 @@ class Environment(object):
         self.history = params.agent_params.history
         self.screen_history = deque(maxlen=self.history)
         self.counter = 0    #keeps track of number of steps taken in domain
+        self.episodes = 0    #keeps track of number of episodes elapsed
+        self.ep_reward = 0     #keeps track of epsodic reward
         self.ep = params.agent_params.ep                           #starting exploration randomness
         self.new_game()
 
@@ -32,6 +34,9 @@ class Environment(object):
     def new_game(self):
         """reset the domain to start new episode and prepare the history"""
         self.game.reset()
+        #reset episodic reward
+        self.ep_reward = 0
+        self.episodes += 1
         #flush history
         self.flush_history()
         #grab new screen and add to history
@@ -54,6 +59,7 @@ class Environment(object):
         self.screen_history.append(screen)
         if not valid:
             self.counter += 1
+            self.ep_reward += reward
         return (self.get_state(), reward, terminal)
 
     def preprocess(self, screen):

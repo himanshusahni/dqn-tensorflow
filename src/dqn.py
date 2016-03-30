@@ -33,6 +33,7 @@ class dqn(object):
 
         #create game environments and gameplaying threads
         self.envs = [game_env.Environment(gameworld, thread_num) for thread_num in range(self.num_gameplay_threads)]
+
         self.gameplay_threads = [threading.Thread(target=self.game_driver, args=(self.envs[thread_num], self.sess)) for thread_num in range(self.num_gameplay_threads)]
         self.img_size = params.game_params.img_size
         (self.img_height, self.img_width) = self.img_size
@@ -102,18 +103,22 @@ class dqn(object):
         runs the thread
         """
         with self.coord.stop_on_exception():
-            while not self.coord.should_stop():
-                try:
-                    #copy over the training net values
-                    if game.counter % params.agent_params.target_q == 0:
-                        self.broadcast_train_net(game, sess)
-                    self.perceive(game, sess)
-                except Exception as e:
-                    traceback.print_exc()
-                    sys.exit()
+            with open("models/stats_dump-" + str(game.thread_num) + ".txt", 'wb') as dumpFile:
+                while not self.coord.should_stop():
+                    try:
+                        #copy over the training net values
+                        if game.counter % params.agent_params.target_q == 0:
+                            self.broadcast_train_net(game, sess)
+                        self.perceive(game, sess, dumpFile)
+                    except Exception as e:
+                        traceback.print_exc()
+                        dumpFile.close()
+                        sys.exit()
 
 
-    def perceive(self, game, sess, valid = False):
+
+
+    def perceive(self, game, sess, dumpFile, valid = False):
         """
         method for collecting game playing experience. Can be run multithreaded with
         different game sessions. Enqueues all sessions to a RandomShuffleQueue
@@ -147,8 +152,10 @@ class dqn(object):
                                                               self.reward_placeholder: reward,
                                                               self.next_state_placeholder: next_state,
                                                               self.terminal_placeholder: terminal})
+
                 #start a new game if terminal
                 if terminal:
+                    dumpFile.write(str(game.counter) + " " + " " + str(game.episodes) + " " + str(game.ep_reward) + "\n")
                     game.new_game()
                 return (reward, terminal)
         except Exception as e:
