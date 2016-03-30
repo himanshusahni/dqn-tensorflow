@@ -13,7 +13,7 @@ import domains
 
 class dqn(object):
     """deep q learning agent for arbitrary domains."""
-    def __init__(self, sess, gameworld):
+    def __init__(self, sess, gameworld, global_step):
         super(dqn, self).__init__()
         self.sess = sess    #tensorflow session
 
@@ -78,7 +78,8 @@ class dqn(object):
                 env.net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
 
         #ops to train network
-        self.opt = tf.train.GradientDescentOptimizer(learning_rate=net_params.lr)
+        learning_rate = tf.train.exponential_decay(net_params.lr, global_step, net_params.lr_step, 0.96, staircase=True)
+        self.opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
 
     def start_playing(self):
         """
@@ -177,7 +178,7 @@ class dqn(object):
         targets = tf.add(est_value, tf.mul(Q_train_actions, -1))
         return targets
 
-    def qLearnMinibatch(self):
+    def qLearnMinibatch(self, global_step):
         """draws minibatch from experience queue and updates current net"""
         try:
             #draw minibatch = [states, actions, rewards, next_states, terminals]
@@ -191,7 +192,9 @@ class dqn(object):
             capped_grads_and_vars = [(tf.clip_by_value(g, -self.clip_delta, self.clip_delta), v) for g, v in grads_and_vars]    #gradient capping
             #save gradients
             gradient_summaries = [tf.histogram_summary("grad - " + v.name, g) for g, v in capped_grads_and_vars]
-            self.opt_op = self.opt.apply_gradients(capped_grads_and_vars)
+            self.opt_op = self.opt.apply_gradients(capped_grads_and_vars, global_step=global_step)
+            tf.scalar_summary('global_step', global_step)
+            tf.scalar_summary('learning_rate', learning_rate)
             return self.opt_op
 
         except Exception as e:
@@ -202,16 +205,19 @@ class dqn(object):
 if __name__ == "__main__":
     #create session and agent
     sess = tf.Session()
-    agent = dqn(sess, domains.fire_fighter)
+    global_step = tf.Variable(0, trainable=False)
+    agent = dqn(sess, domains.fire_fighter, global_step)
+    train_op = agent.qLearnMinibatch(global_step)
+    #initialize everything
     sess.run(tf.initialize_all_variables())
-    train_op = agent.qLearnMinibatch()
+
     merged = tf.merge_all_summaries()
     writer = tf.train.SummaryWriter("./logs", sess.graph_def)
     saver = tf.train.Saver()
-    steps = 0
     valid_game = game_env.Environment(domains.fire_fighter, -1)
     hist_size_op = agent.experience.size()
     num_hist = 0
+    steps = 0
     try:
         with sess.as_default():
             #run 10,000 steps in the beginning random
