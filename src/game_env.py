@@ -14,6 +14,7 @@ class Environment(object):
         self.counter = 0    #keeps track of number of steps taken in domain
         self.episodes = 0    #keeps track of number of episodes elapsed
         self.ep_reward = 0     #keeps track of epsodic reward
+        self.training_steps = 0
         self.ep = params.agent_params.ep                           #starting exploration randomness
         self.new_game()
 

@@ -155,7 +155,8 @@ class dqn(object):
 
                 #start a new game if terminal
                 if terminal:
-                    dumpFile.write(str(game.counter) + " " + " " + str(game.episodes) + " " + str(game.ep_reward) + "\n")
+                    dumpFile.write(str(game.counter) + " " + " " + str(game.episodes) + " " +
+                                                    str(game.ep_reward) + " " + str(game.ep) + " " + str(game.training_steps) + "\n")
                     game.new_game()
                 return (reward, terminal)
         except Exception as e:
@@ -244,6 +245,8 @@ if __name__ == "__main__":
                     print "Size of history: " + str(hist_size_op.eval())
                     print "Training steps executed: " + str(steps)
                 steps += 1
+                for game in agent.envs:
+                    game.training_steps += 1
                 #copy over target network if needed
                 if steps % params.agent_params.target_q == 0:
                     print "COPYING TARGET NETWORK OVER AT " + str(steps)
