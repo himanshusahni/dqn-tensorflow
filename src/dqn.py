@@ -80,6 +80,7 @@ class dqn(object):
         #ops to train network
         learning_rate = tf.train.exponential_decay(net_params.lr, global_step, net_params.lr_step, 0.96, staircase=True)
         self.opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
+        tf.scalar_summary('learning_rate', learning_rate)
 
     def start_playing(self):
         """
@@ -194,7 +195,6 @@ class dqn(object):
             gradient_summaries = [tf.histogram_summary("grad - " + v.name, g) for g, v in capped_grads_and_vars]
             self.opt_op = self.opt.apply_gradients(capped_grads_and_vars, global_step=global_step)
             tf.scalar_summary('global_step', global_step)
-            tf.scalar_summary('learning_rate', learning_rate)
             return self.opt_op
 
         except Exception as e:
@@ -263,6 +263,29 @@ if __name__ == "__main__":
                 if (steps % params.agent_params.save_freq == 0):
                     print "SAVING MODEL AFTER " + str(steps) + " ..."
                     saver.save(sess, "./models/model", global_step = steps)
+                    ###DEBUGGING###
+                    print "Dumping Minibatch!"
+                    mini_op = agent.experience.dequeue_many(agent.batch_size)
+                    states, actions, rewards, next_states, terminals = sess.run(mini_op)
+                    np.save("models/states-" + str(steps), states)
+                    np.save("models/actions-" + str(steps), actions)
+                    np.save("models/rewards-" + str(steps), rewards)
+                    np.save("models/next_states-" + str(steps), next_states)
+                    np.save("models/terminals-" + str(steps), terminals)
+                    print "SEARCHING FOR REWARD MINIBATCH"
+                    satisfied = False
+                    while (not satisfied):
+                        print "Size of history: " + str(hist_size_op.eval())
+                        states, actions, rewards, next_states, terminals = sess.run(mini_op)
+                        if np.any(rewards):
+                            print "DUMPING REWARD MINIBATCH!"
+                            np.save("models/states-" + str(steps), states)
+                            np.save("models/actions-" + str(steps), actions)
+                            np.save("models/rewards-" + str(steps), rewards)
+                            np.save("models/next_states-" + str(steps), next_states)
+                            np.save("models/terminals-" + str(steps), terminals)
+                            satisfied = True
+                    #DEBUGGING###
     except Exception as e:
         traceback.print_exc()
         sys.exit()
