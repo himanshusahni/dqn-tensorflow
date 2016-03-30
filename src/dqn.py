@@ -279,11 +279,11 @@ if __name__ == "__main__":
                         states, actions, rewards, next_states, terminals = sess.run(mini_op)
                         if np.any(rewards):
                             print "DUMPING REWARD MINIBATCH!"
-                            np.save("models/states-" + str(steps), states)
-                            np.save("models/actions-" + str(steps), actions)
-                            np.save("models/rewards-" + str(steps), rewards)
-                            np.save("models/next_states-" + str(steps), next_states)
-                            np.save("models/terminals-" + str(steps), terminals)
+                            np.save("models/success-states-" + str(steps), states)
+                            np.save("models/success-actions-" + str(steps), actions)
+                            np.save("models/success-rewards-" + str(steps), rewards)
+                            np.save("models/success-next_states-" + str(steps), next_states)
+                            np.save("models/success-terminals-" + str(steps), terminals)
                             satisfied = True
                     #DEBUGGING###
     except Exception as e:
