@@ -10,24 +10,25 @@ class net_params(object):
     filter_stride = [4, 2, 1]         #stride at each layer
     n_hid         = [512]             #size of fully connected layers
     batch_size    = 32                #states in minibatch
-    lr            = 0.0025            #learning rate
+    lr            = 0.001             #learning rate
+    lr_step       = 2e5               #step size of lr annealing
     clip_delta    = 1                 #gradient clipping
 
 class agent_params(object):
     """paramaters for agent behavior"""
-    num_gameplay_threads = 8            #unused in serial
+    num_gameplay_threads = 12            #unused in serial
     history              = 3            #frames stored in history buffer
     gamma                = 0.99         #discount factor
-    target_q             = 20000         #frequency of copying training network
+    target_q             = 10000         #frequency of copying training network
     learn_start          = 10000         #steps of random play in beginning
-    replay_memory        = 1e6       #maximum number of states in replay
+    replay_memory        = 3e5       #maximum number of states in replay
     min_replay           = 10000         #minimum number of states in replay
     steps                = 1e6        #maximum training steps
     ep                   = 1.0          #starting epsilon
     ep_end               = 0.1          #final epsilon
     ep_endt              = 7e5       #number of steps after which epsilon stops annealing
     valid_ep             = 0.05         #epsilon for validation runs
-    valid_start          = 2e5         #steps after which validation starts
+    valid_start          = 5e5         #steps after which validation starts
     valid_episodes       = 20          #number of episodes validation run averaged over
     save_freq            = 50000        #frequency of saving convnet
     valid_freq           = 50000         #frequency of validations
