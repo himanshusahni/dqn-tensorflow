@@ -50,7 +50,7 @@ class ConvNetGenerator(object):
         currently created on highest priority available device (cpu or gpu)
         """
         return tf.get_variable('weights', shape,
-                        initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.001),
+                        initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
                         trainable=self.trainable)
 
     def create_bias(self, size):
@@ -58,7 +58,7 @@ class ConvNetGenerator(object):
         creates bias vector of shape [size] filled with 0.1
         """
         return tf.get_variable('bias', [size],
-                                initializer=tf.constant_initializer(0.001),
+                                initializer=tf.constant_initializer(0.1),
                                 trainable=self.trainable)
 
     def copy_weights(self, other_var_dir, sess):

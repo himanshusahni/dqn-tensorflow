@@ -26,13 +26,15 @@ class agent_params(object):
     steps                = 1e6        #maximum training steps
     ep                   = 1.0          #starting epsilon
     ep_end               = 0.1          #final epsilon
-    ep_endt              = 7e5       #number of steps after which epsilon stops annealing
+    ep_endt              = 1.5e6       #number of steps after which epsilon stops annealing
     valid_ep             = 0.05         #epsilon for validation runs
-    valid_start          = 5e5         #steps after which validation starts
+    valid_start          = 1e6         #steps after which validation starts
     valid_episodes       = 20          #number of episodes validation run averaged over
     save_freq            = 50000        #frequency of saving convnet
     valid_freq           = 50000         #frequency of validations
     log_freq             = 100          #frequency of logging loss and gradient histograms
+    log_start            = 1500         #when to start logging loss
+          
 class game_params:
     grid_size         = [5,5]
     grid_to_pixel     = 6               #pixels per grid location

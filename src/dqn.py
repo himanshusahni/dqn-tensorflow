@@ -194,7 +194,8 @@ class dqn(object):
             minibatch = self.experience.dequeue_many(self.batch_size)
             targets = self.getQUpdate(*minibatch)
             #get loss
-            loss = tf.square(targets)
+            loss_all = tf.square(targets)
+            loss = tf.reduce_mean(loss_all)
             loss_summary = tf.scalar_summary("loss", tf.reduce_sum(tf.mul(loss, loss)))
             #create the gradient descent op
             grads_and_vars = self.opt.compute_gradients(loss)
@@ -239,36 +240,16 @@ if __name__ == "__main__":
             while(steps < params.agent_params.steps):
                 #train a minibatch
                 result = sess.run([merged,train_op])
-                if steps % params.agent_params.log_freq == 0:
+                #all book keeping now
+                steps += 1
+                for game in agent.envs:
+                    game.training_steps += 1
+		#dump summaries if needed
+		if (steps > params.agent_params.log_start) and (steps % params.agent_params.log_freq == 0):
                     summary_str = result[0]
                     writer.add_summary(summary_str, steps)
                     print "Size of history: " + str(hist_size_op.eval())
                     print "Training steps executed: " + str(steps)
-                steps += 1
-                for game in agent.envs:
-                    game.training_steps += 1
-                #copy over target network if needed
-                if steps % params.agent_params.target_q == 0:
-                    print "COPYING TARGET NETWORK OVER AT " + str(steps)
-                    agent.target_net.copy_weights(agent.train_net.var_dir, sess)
-                #validate!
-                if (steps >= params.agent_params.valid_start) and (steps % params.agent_params.valid_freq == 0):
-                    print "Starting a validation run!"
-                    valid_game.new_game()  #terminate current game and set up a new validation game
-                    avg_r = 0.0
-                    for v_episodes in range(params.agent_params.valid_episodes):
-                        print "RUNNING VALIDATION EPISODE " + str(v_episodes)
-                        ep_r = 0.0
-                        terminal = False
-                        ep_steps = 0
-                        while not terminal:
-                            ep_steps += 1
-                            r, terminal = agent.perceive(valid_game, sess, valid = True)
-                            ep_r += r
-                        print "EPISODE ENDED. EPISODE REWARD " + str(ep_r)
-                        avg_r += ep_r
-                    avg_r /= params.agent_params.valid_episodes
-                    print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
                 #save
                 if (steps % params.agent_params.save_freq == 0):
                     print "SAVING MODEL AFTER " + str(steps) + " ..."
@@ -295,7 +276,29 @@ if __name__ == "__main__":
                             np.save("models/success-next_states-" + str(steps), next_states)
                             np.save("models/success-terminals-" + str(steps), terminals)
                             satisfied = True
-                    #DEBUGGING###
+                #DEBUGGING###
+                #copy over target network if needed
+                if steps % params.agent_params.target_q == 0:
+                    print "COPYING TARGET NETWORK OVER AT " + str(steps)
+                    agent.target_net.copy_weights(agent.train_net.var_dir, sess)
+                #validate!
+                if (steps >= params.agent_params.valid_start) and (steps % params.agent_params.valid_freq == 0):
+                    print "Starting a validation run!"
+                    valid_game.new_game()  #terminate current game and set up a new validation game
+                    avg_r = 0.0
+                    for v_episodes in range(params.agent_params.valid_episodes):
+                        print "RUNNING VALIDATION EPISODE " + str(v_episodes)
+                        ep_r = 0.0
+                        terminal = False
+                        ep_steps = 0
+                        while not terminal:
+                            ep_steps += 1
+                            r, terminal = agent.perceive(valid_game, sess, valid = True)
+                            ep_r += r
+                        print "EPISODE ENDED. EPISODE REWARD " + str(ep_r)
+                        avg_r += ep_r
+                    avg_r /= params.agent_params.valid_episodes
+                    print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
     except Exception as e:
         traceback.print_exc()
         sys.exit()
