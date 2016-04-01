@@ -18,9 +18,11 @@ if __name__ == "__main__":
     if model and model.model_checkpoint_path:
         print "Loading model " + model.model_checkpoint_path
         saver.restore(sess, model.model_checkpoint_path)
+
     # model_num = 800000
     # print "Loading model model-" + str(model_num)
     # saver.restore(sess, "models/model-" + str(model_num))
+
     #set up GUI
     plt.ion()
     f = plt.figure()
@@ -40,18 +42,18 @@ if __name__ == "__main__":
     with sess.as_default():
         while (inp != "q"):
             print "Starting a validation run!"
-            agent.envs[0].new_game()  #terminate current game and set up a new validation game
+            agent.requestNewGame()  #terminate current game and set up a new validation game
             terminal = False
             while not terminal:
                 #show current state
-                a_show.set_data(agent.envs[0].get_state()[:,:,0])
+                a_show.set_data(agent.state[:,:,0])
                 a_show.autoscale()
-                b_show.set_data(agent.envs[0].get_state()[:,:,1])
+                b_show.set_data(agent.state[:,:,1])
                 b_show.autoscale()
-                c_show.set_data(agent.envs[0].get_state()[:,:,2])
+                c_show.set_data(agent.state[:,:,2])
                 c_show.autoscale()
                 #pick best action according to convnet on current state
-                action_values = agent.train_net.logits.eval(feed_dict={agent.batch_state_placeholder: np.expand_dims(agent.envs[0].get_state(), axis=0)})
+                action_values = agent.train_net.logits.eval(feed_dict={agent.batch_state_placeholder: np.expand_dims(agent.state, axis=0)})
                 action_values = np.squeeze(action_values)
                 max_a = np.argmax(action_values)
                 for i,value in enumerate(action_values):
@@ -72,4 +74,4 @@ if __name__ == "__main__":
                         print "Invalid selection, please select: w,s,a,d,z,x,q, or y only!"
                         invalid = True
                 #execute that action in the environment,
-                (next_state, reward, terminal) = agent.envs[0].take_action(chosen_a, "False")
+                (next_state, reward, terminal) = agent.env.take_action(chosen_a, "False")

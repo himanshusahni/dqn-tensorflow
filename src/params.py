@@ -16,12 +16,11 @@ class net_params(object):
 
 class agent_params(object):
     """paramaters for agent behavior"""
-
     num_gameplay_threads = 3            #unused in serial
     history              = 3            #frames stored in history buffer
     gamma                = 0.99         #discount factor
     target_q             = 10000         #frequency of copying training network
-    learn_start          = 10000         #steps of random play in beginning
+    learn_start          = 12000         #steps of random play in beginning
     replay_memory        = 3e5       #maximum number of states in replay
     min_replay           = 10000         #minimum number of states in replay
     steps                = 1e6        #maximum training steps
@@ -33,8 +32,8 @@ class agent_params(object):
     valid_episodes       = 20          #number of episodes validation run averaged over
     save_freq            = 50000        #frequency of saving convnet
     valid_freq           = 50000         #frequency of validations
-    log_freq             = 100          #frequency of logging loss and gradient histograms
-    log_start            = 1500         #when to start logging loss
+    log_freq             = 1          #frequency of logging loss and gradient histograms
+    log_start            = 0         #when to start logging loss
 
 class game_params:
     grid_size         = [5,5]

@@ -4,11 +4,10 @@ import params
 
 class Environment(object):
     """Shell for simplyfying certain tasks for agent"""
-    def __init__(self, game, thread_num):
+    def __init__(self, game):
         #game parameters
-        self.thread_num = thread_num
         self.game = game(params.game_params)
-        self.img_size = params.game_params.img_size
+        self.img_size = self.game.get_dims()
         self.history = params.agent_params.history
         self.screen_history = deque(maxlen=self.history)
         self.counter = 0    #keeps track of number of steps taken in domain

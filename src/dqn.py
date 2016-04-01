@@ -25,22 +25,17 @@ class dqn(object):
         self.min_replay = agent_params.min_replay           #min length of memory queue
         self.history = agent_params.history                 #no. of frames of memory in state
         self.gamma = agent_params.gamma                     #discount factor
+
         self.ep_delta = (agent_params.ep - agent_params.ep_end)/(agent_params.ep_endt - agent_params.learn_start)
         self.learn_start = agent_params.learn_start         #steps after which epsilon gets annealed
         self.ep_endt = agent_params.ep_endt                 #steps after which epsilon stops annealing
         self.valid_ep = agent_params.valid_ep               #epsilon to use during validation runs
-        self.num_gameplay_threads = agent_params.num_gameplay_threads
-
         #create game environments and gameplaying threads
-        self.envs = [game_env.Environment(gameworld, thread_num) for thread_num in range(self.num_gameplay_threads)]
-
-        self.gameplay_threads = [threading.Thread(target=self.game_driver, args=(self.envs[thread_num], self.sess)) for thread_num in range(self.num_gameplay_threads)]
-        self.img_size = params.game_params.img_size
+        self.env = game_env.Environment(gameworld)
+        self.img_size = self.env.get_img_size()
         (self.img_height, self.img_width) = self.img_size
-        self.available_actions = self.envs[0].get_actions()
+        self.available_actions = self.env.get_actions()
         self.num_actions = len(self.available_actions)
-        self.coord = tf.train.Coordinator()
-
         #create experience buffer
         self.experience = tf.RandomShuffleQueue(self.replay_memory, self.min_replay,
                                     dtypes=(tf.float32, tf.int32, tf.float32, tf.float32, tf.bool),
@@ -73,96 +68,60 @@ class dqn(object):
         with tf.variable_scope("target") as self.target_scope:
             self.target_net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
 
-        #create a copy of the training network with each game
-        for (thread_num, env) in enumerate(self.envs):
-            with tf.variable_scope("game"+str(thread_num)):
-                env.net = convnet.ConvNetGenerator(net_params, self.batch_state_placeholder, trainable=False)
-
         #ops to train network
         learning_rate = tf.train.exponential_decay(net_params.lr, global_step, net_params.lr_step, 0.96, staircase=True)
         self.opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
         tf.scalar_summary('learning_rate', learning_rate)
 
-    def start_playing(self):
-        """
-        Starts the gameplay threads. Can only be called once for an agent!!
-        Calling multiple times will raise an exception!!
-        """
-        for thread in self.gameplay_threads:
-            thread.start()
-
-    def broadcast_train_net(self, game, sess):
-        """
-        broadcasts the current training net to the given game
-        """
-        with sess.as_default():
-            game.net.copy_weights(self.train_net.var_dir, sess)
-
-    def game_driver(self, game, sess):
-        """
-        runs the thread
-        """
-        with self.coord.stop_on_exception():
-            with open("models/stats_dump-" + str(game.thread_num) + ".txt", 'wb') as dumpFile:
-                while not self.coord.should_stop():
-                    try:
-                        #copy over the training net values
-                        if game.counter % params.agent_params.target_q == 0:
-                            self.broadcast_train_net(game, sess)
-                        self.perceive(game, sess, dumpFile)
-                    except Exception as e:
-                        traceback.print_exc()
-                        dumpFile.close()
-                        sys.exit()
-
-
-
-
-    def perceive(self, game, sess, dumpFile, valid = False):
+    def perceive(self, dumpFile, valid = False):
         """
         method for collecting game playing experience. Can be run multithreaded with
         different game sessions. Enqueues all sessions to a RandomShuffleQueue
         """
         try:
-            with sess.as_default():
-                # max_a = np.random.randint(0,self.num_actions - 1)
-                #e-greedy action selection
-                if not valid:
-                    if self.learn_start < game.counter < self.ep_endt:
-                        game.ep -= self.ep_delta    #anneal epsilon
-                    chosen_ep = game.ep
-                else:
-                    chosen_ep = self.valid_ep
-                if (random.random() < chosen_ep):
-                    chosen_a = np.random.randint(0,self.num_actions - 1)
-                else:
-                    #pick best action according to convnet on current state
-                    action_values = game.net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(game.get_state(), axis=0)})
-                    max_a = np.argmax(action_values)
-                    chosen_a = max_a
+            # max_a = np.random.randint(0,self.num_actions - 1)
+            #e-greedy action selection
+            if not valid:
+                if self.learn_start < self.env.counter < self.ep_endt:
+                    self.env.ep -= self.ep_delta    #anneal epsilon
+                chosen_ep = self.env.ep
+            else:
+                chosen_ep = self.valid_ep
+            if (random.random() < chosen_ep):
+                chosen_a = np.random.randint(0,self.num_actions - 1)
+            else:
+                #pick best action according to convnet on current state
+                action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(self.env.get_state(), axis=0)})
+                max_a = np.argmax(action_values)
+                chosen_a = max_a
 
-                #execute that action in the environment,
-                (next_state, reward, terminal) = game.take_action(chosen_a, valid)
-                action_one_hot = np.zeros(self.num_actions, dtype='int32')
-                action_one_hot[chosen_a] = 1
-                #insert into queue
-                if not valid:
-                    sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: game.get_state(),
-                                                              self.action_placeholder: action_one_hot,
-                                                              self.reward_placeholder: reward,
-                                                              self.next_state_placeholder: next_state,
-                                                              self.terminal_placeholder: terminal})
+            #execute that action in the environment,
+            (next_state, reward, terminal) = self.env.take_action(chosen_a, valid)
+            action_one_hot = np.zeros(self.num_actions, dtype='int32')
+            action_one_hot[chosen_a] = 1
+            #insert into queue
+            if not valid:
+                sess.run(self.enqueue_op, feed_dict={self.enq_state_placeholder: self.env.get_state(),
+                                                          self.action_placeholder: action_one_hot,
+                                                          self.reward_placeholder: reward,
+                                                          self.next_state_placeholder: next_state,
+                                                          self.terminal_placeholder: terminal})
 
-                #start a new game if terminal
-                if terminal:
-                    dumpFile.write(str(game.counter) + " " + " " + str(game.episodes) + " " +
-                                                    str(game.ep_reward) + " " + str(game.ep) + " " + str(game.training_steps) + "\n")
-                    game.new_game()
-                return (reward, terminal)
+            #start a new game if terminal
+            if terminal:
+                dumpFile.write(str(self.env.counter) + " " + " " + str(self.env.episodes) + " " +
+                                                str(self.env.ep_reward) + " " + str(self.env.ep) + " " + str(self.env.training_steps) + "\n")
+                self.requestNewGame()
+            return (reward, terminal)
         except Exception as e:
             traceback.print_exc()
             sys.exit()
 
+
+
+    def requestNewGame(self):
+        """starts a new game from the environment"""
+        self.env.new_game()
 
     def getQUpdate(self, states, actions, rewards, next_states, terminals):
         """calulcates gradients on a minibatch"""
@@ -223,85 +182,85 @@ if __name__ == "__main__":
     merged = tf.merge_all_summaries()
     writer = tf.train.SummaryWriter("./logs", sess.graph_def)
     saver = tf.train.Saver()
-    valid_game = game_env.Environment(domains.fire_fighter, -1)
+    valid_game = game_env.Environment(domains.fire_fighter)
     hist_size_op = agent.experience.size()
     num_hist = 0
     steps = 0
     try:
         with sess.as_default():
             #run 10,000 steps in the beginning random
-            print "STARTING AGENT GAMEPLAY!"
-            agent.start_playing()
-            while not (num_hist > params.agent_params.learn_start):
-                time.sleep(1)
-                num_hist = hist_size_op.eval()
-                print "Size of history: " + str(num_hist)
-            print "DONE RANDOM PLAY"
-            while(steps < params.agent_params.steps):
-                #train a minibatch
-                result = sess.run([merged,train_op])
-                #all book keeping now
-                steps += 1
-                for game in agent.envs:
-                    game.training_steps += 1
-		#dump summaries if needed
-		if (steps > params.agent_params.log_start) and (steps % params.agent_params.log_freq == 0):
-                    summary_str = result[0]
-                    writer.add_summary(summary_str, steps)
-                    print "Size of history: " + str(hist_size_op.eval())
-                    print "Training steps executed: " + str(steps)
-                #save
-                if (steps % params.agent_params.save_freq == 0):
-                    print "SAVING MODEL AFTER " + str(steps) + " ..."
-                    saver.save(sess, "./models/model", global_step = steps)
-                    ###DEBUGGING###
-                    print "Dumping Minibatch!"
-                    mini_op = agent.experience.dequeue_many(agent.batch_size)
-                    states, actions, rewards, next_states, terminals = sess.run(mini_op)
-                    np.save("models/states-" + str(steps), states)
-                    np.save("models/actions-" + str(steps), actions)
-                    np.save("models/rewards-" + str(steps), rewards)
-                    np.save("models/next_states-" + str(steps), next_states)
-                    np.save("models/terminals-" + str(steps), terminals)
-                    print "SEARCHING FOR REWARD MINIBATCH"
-                    satisfied = False
-                    while (not satisfied):
-                        print "Size of history: " + str(hist_size_op.eval())
-                        states, actions, rewards, next_states, terminals = sess.run(mini_op)
-                        if np.any(rewards):
-                            print "DUMPING REWARD MINIBATCH!"
-                            np.save("models/success-states-" + str(steps), states)
-                            np.save("models/success-actions-" + str(steps), actions)
-                            np.save("models/success-rewards-" + str(steps), rewards)
-                            np.save("models/success-next_states-" + str(steps), next_states)
-                            np.save("models/success-terminals-" + str(steps), terminals)
-                            satisfied = True
-                #DEBUGGING###
-                #copy over target network if needed
-                if steps % params.agent_params.target_q == 0:
-                    print "COPYING TARGET NETWORK OVER AT " + str(steps)
-                    agent.target_net.copy_weights(agent.train_net.var_dir, sess)
-                #validate!
-                if (steps >= params.agent_params.valid_start) and (steps % params.agent_params.valid_freq == 0):
-                    print "Starting a validation run!"
-                    valid_game.new_game()  #terminate current game and set up a new validation game
-                    avg_r = 0.0
-                    for v_episodes in range(params.agent_params.valid_episodes):
-                        print "RUNNING VALIDATION EPISODE " + str(v_episodes)
-                        ep_r = 0.0
-                        terminal = False
-                        ep_steps = 0
-                        while not terminal:
-                            ep_steps += 1
-                            r, terminal = agent.perceive(valid_game, sess, valid = True)
-                            ep_r += r
-                        print "EPISODE ENDED. EPISODE REWARD " + str(ep_r)
-                        avg_r += ep_r
-                    avg_r /= params.agent_params.valid_episodes
-                    print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
+            with open("models/stats_dump.txt", 'wb') as dumpFile:
+                print "STARTING RANDOM INITIALIZATIONS"
+                while(steps < params.agent_params.learn_start):
+                    agent.perceive(dumpFile)
+                    steps += 1
+                    num_hist = hist_size_op.eval()
+                    print "Size of history: " + str(num_hist)
+                print "DONE RANDOM PLAY"
+                while(steps < params.agent_params.steps):
+                    #train a minibatch
+                    result = sess.run([merged,train_op])
+                    #all book keeping now
+                    for _ in range(params.net_params.batch_size):
+                        agent.perceive(dumpFile)
+                        num_hist = hist_size_op.eval()
+                        print "Size of history: " + str(num_hist)
+                        steps += 1
+                        #dump summaries if needed
+                        if (steps > params.agent_params.log_start) and (steps % params.agent_params.log_freq == 0):
+                            summary_str = result[0]
+                            writer.add_summary(summary_str, steps)
+                            print "Size of history: " + str(hist_size_op.eval())
+                            print "Training steps executed: " + str(global_step.eval())
+                        #save
+                        if (steps % params.agent_params.save_freq == 0):
+                            print "SAVING MODEL AFTER " + str(steps) + " ..."
+                            saver.save(sess, "./models/model", global_step = steps)
+                            ###DEBUGGING###
+                            print "Dumping Minibatch!"
+                            mini_op = agent.experience.dequeue_many(agent.batch_size)
+                            states, actions, rewards, next_states, terminals = sess.run(mini_op)
+                            np.save("models/states-" + str(steps), states)
+                            np.save("models/actions-" + str(steps), actions)
+                            np.save("models/rewards-" + str(steps), rewards)
+                            np.save("models/next_states-" + str(steps), next_states)
+                            np.save("models/terminals-" + str(steps), terminals)
+                            print "SEARCHING FOR REWARD MINIBATCH"
+                            satisfied = False
+                            while (not satisfied):
+                                print "Size of history: " + str(hist_size_op.eval())
+                                states, actions, rewards, next_states, terminals = sess.run(mini_op)
+                                if np.any(rewards):
+                                    print "DUMPING REWARD MINIBATCH!"
+                                    np.save("models/success-states-" + str(steps), states)
+                                    np.save("models/success-actions-" + str(steps), actions)
+                                    np.save("models/success-rewards-" + str(steps), rewards)
+                                    np.save("models/success-next_states-" + str(steps), next_states)
+                                    np.save("models/success-terminals-" + str(steps), terminals)
+                                    satisfied = True
+                        #DEBUGGING###
+                        #copy over target network if needed
+                        if steps % params.agent_params.target_q == 0:
+                            print "COPYING TARGET NETWORK OVER AT " + str(steps)
+                            agent.target_net.copy_weights(agent.train_net.var_dir, sess)
+                        #validate!
+                        if (steps >= params.agent_params.valid_start) and (steps % params.agent_params.valid_freq == 0):
+                            print "Starting a validation run!"
+                            valid_game.new_game()  #terminate current game and set up a new validation game
+                            avg_r = 0.0
+                            for v_episodes in range(params.agent_params.valid_episodes):
+                                print "RUNNING VALIDATION EPISODE " + str(v_episodes)
+                                ep_r = 0.0
+                                terminal = False
+                                ep_steps = 0
+                                while not terminal:
+                                    ep_steps += 1
+                                    r, terminal = agent.perceive(valid_game, sess, valid = True)
+                                    ep_r += r
+                                print "EPISODE ENDED. EPISODE REWARD " + str(ep_r)
+                                avg_r += ep_r
+                            avg_r /= params.agent_params.valid_episodes
+                            print "Validation reward after " + str(steps) + " steps is " + str(avg_r)
     except Exception as e:
         traceback.print_exc()
         sys.exit()
-    finally:
-        agent.coord.request_stop()
-        agent.coord.join(agent.gameplay_threads)
