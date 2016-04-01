@@ -113,6 +113,7 @@ class ConvNetGenerator(object):
                 #print outputs[-1].get_shape()
 
         last_conv = outputs[-1]
+
         dim = 1
         for d in last_conv.get_shape()[1:].as_list():
             dim *= d
@@ -134,10 +135,10 @@ class ConvNetGenerator(object):
                 self.var_dir[W.name] = W
                 self.var_dir[b.name] = b
                 hidden = tf.nn.relu_layer(outputs[-1], W, b, name = scope.name)
+                # hidden = tf.matmul(outputs[-1], W) + b
                 outputs.append(hidden)
                 #print "FULLY CONNECTED"
                 #print outputs[-1].get_shape()
-
 
         #last linear layer connecting to outputs
         with tf.variable_scope('output') as scope:

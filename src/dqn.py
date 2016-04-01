@@ -169,9 +169,9 @@ class dqn(object):
         #get max action for next state: Q_target
         with tf.variable_scope(self.target_scope, reuse = True):
             Q_target = self.target_net.inference(next_states)
-            Q_target_max = tf.reduce_max(Q_target, reduction_indices=[1])
+            Q_target_max_pre = tf.reduce_max(Q_target, reduction_indices=[1])
         #terminal states have Q=0, Q_target_max = (1-terminal)*Q_target_max
-        Q_target_max = tf.mul(Q_target_max, tf.add(1.0, tf.mul(tf.cast(terminals, tf.float32), -1)))
+        Q_target_max = tf.mul(Q_target_max_pre, tf.add(1.0, tf.mul(tf.cast(terminals, tf.float32), -1)))
         #discount: (1-terminal)*gamma*Q_target_max
         Q_target_disc = tf.mul(Q_target_max , self.gamma)
         #total estimated value : r + (1-terminal)*gamma*Q_target_max

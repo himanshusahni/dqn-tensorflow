@@ -16,7 +16,8 @@ class net_params(object):
 
 class agent_params(object):
     """paramaters for agent behavior"""
-    num_gameplay_threads = 12            #unused in serial
+
+    num_gameplay_threads = 3            #unused in serial
     history              = 3            #frames stored in history buffer
     gamma                = 0.99         #discount factor
     target_q             = 10000         #frequency of copying training network
@@ -34,7 +35,7 @@ class agent_params(object):
     valid_freq           = 50000         #frequency of validations
     log_freq             = 100          #frequency of logging loss and gradient histograms
     log_start            = 1500         #when to start logging loss
-          
+
 class game_params:
     grid_size         = [5,5]
     grid_to_pixel     = 6               #pixels per grid location
