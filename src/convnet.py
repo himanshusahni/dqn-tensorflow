@@ -7,11 +7,12 @@ class ConvNetGenerator(object):
     """
     creates, initializes, and returns a convolutional neural network with given params.
     """
-    def __init__(self, params, net_input, trainable):
+    def __init__(self, params, trainable):
         """
         net_input is a placeholder variable.
         """
         super(ConvNetGenerator, self).__init__()
+        self.state_placeholder = tf.placeholder(tf.float32, [None, params.img_height, params.img_width, params.history])
         self.trainable = trainable     #whether the weights on this network will be trained
         self.input_shape = [None, params.img_height, params.img_width, params.history]  #batch of input images to net
         self.input_dims = self.input_shape[1]*self.input_shape[2]*self.input_shape[3]   #pixels in each image
@@ -41,7 +42,7 @@ class ConvNetGenerator(object):
         self.var_dir = {}
         #scope under which the network was created
         self.scope_name = tf.constant("dummy").name.rsplit('/',1)[0]
-        self.logits = self.inference(net_input)
+        self.logits = self.inference(self.state_placeholder)
         self.create_weight_cp_ops()
 
     def create_weights(self, shape):
