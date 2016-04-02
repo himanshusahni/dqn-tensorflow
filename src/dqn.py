@@ -90,7 +90,7 @@ class dqn(object):
                 chosen_a = np.random.randint(0,self.num_actions - 1)
             else:
                 #pick best action according to convnet on current state
-                action_values = self.train_net.logits.eval(feed_dict={self.batch_state_placeholder: np.expand_dims(self.env.get_state(), axis=0)})
+                action_values = self.train_net.logits.eval(feed_dict={self.train_net.state_placeholder: np.expand_dims(self.env.get_state(), axis=0)})
                 max_a = np.argmax(action_values)
                 chosen_a = max_a
 
