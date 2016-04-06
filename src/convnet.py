@@ -51,7 +51,7 @@ class ConvNetGenerator(object):
         currently created on highest priority available device (cpu or gpu)
         """
         return tf.get_variable('weights', shape,
-                        initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.1),
+                        initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.01),
                         trainable=self.trainable)
 
     def create_bias(self, size):
@@ -59,7 +59,7 @@ class ConvNetGenerator(object):
         creates bias vector of shape [size] filled with 0.1
         """
         return tf.get_variable('bias', [size],
-                                initializer=tf.constant_initializer(0.1),
+                                initializer=tf.constant_initializer(0.01),
                                 trainable=self.trainable)
 
     def copy_weights(self, other_var_dir, sess):
@@ -86,7 +86,7 @@ class ConvNetGenerator(object):
         Cnn with self.conv_layers convolutional layers and self.full_connect_layers fully
         connected layers. relu non-linearity after each conv layer. no max-pooling.
         """
-        outputs = [net_input]
+        self.outputs = [net_input]
         #print "INPUT"
         #print outputs[-1].get_shape()
         for conv_layer in range(self.conv_layers):
@@ -102,26 +102,26 @@ class ConvNetGenerator(object):
                         in_channels, out_channels]
                 #print shape
                 W = self.create_weights(shape)
-                conv = tf.nn.conv2d(outputs[-1], W, [1, self.filter_stride[conv_layer],
+                conv = tf.nn.conv2d(self.outputs[-1], W, [1, self.filter_stride[conv_layer],
                                                         self.filter_stride[conv_layer],1], padding='SAME')
                 b = self.create_bias(out_channels)
                 self.var_dir[W.name] = W
                 self.var_dir[b.name] = b
                 bias = tf.nn.bias_add(conv, b)
                 conv = tf.nn.relu(bias, name=scope.name)
-                outputs.append(conv)
+                self.outputs.append(conv)
                 #print "CONV" + str(conv_layer)
-                #print outputs[-1].get_shape()
+                #print self.outputs[-1].get_shape()
 
-        last_conv = outputs[-1]
+        last_conv = self.outputs[-1]
 
         dim = 1
         for d in last_conv.get_shape()[1:].as_list():
             dim *= d
         reshape = tf.reshape(last_conv, [-1, dim], name='reshape')
-        outputs.append(reshape)
+        self.outputs.append(reshape)
         #print "RESHAPED"
-        #print outputs[-1].get_shape()
+        #print self.outputs[-1].get_shape()
         for connect_layer in range(self.full_connect_layers):
             with tf.variable_scope('hidden' + str(connect_layer)) as scope:
                 #find size of weight matrix
@@ -135,13 +135,13 @@ class ConvNetGenerator(object):
                 b = self.create_bias(out_size)
                 self.var_dir[W.name] = W
                 self.var_dir[b.name] = b
-                hidden = tf.nn.relu_layer(outputs[-1], W, b, name = scope.name)
-                # hidden = tf.matmul(outputs[-1], W) + b
-                outputs.append(hidden)
+                # hidden = tf.nn.relu_layer(self.outputs[-1], W, b, name = scope.name)
+                hidden = tf.matmul(self.outputs[-1], W) + b
+                self.outputs.append(hidden)
                 #print "FULLY CONNECTED"
-                #print outputs[-1].get_shape()
+                #print self.outputs[-1].get_shape()
 
-        #last linear layer connecting to outputs
+        #last linear layer connecting to self.outputs
         with tf.variable_scope('output') as scope:
             in_size = self.n_hid[self.full_connect_layers - 1]
             out_size = self.output_dims
@@ -150,8 +150,8 @@ class ConvNetGenerator(object):
             b = self.create_bias(out_size)
             self.var_dir[W.name] = W
             self.var_dir[b.name] = b
-            hidden = tf.nn.bias_add(tf.matmul(outputs[-1], W), b)
-            outputs.append(hidden)
+            hidden = tf.nn.bias_add(tf.matmul(self.outputs[-1], W), b)
+            self.outputs.append(hidden)
         #print "LAST FULLY CONNECTED"
-        #print outputs[-1].get_shape()
-        return outputs[-1]  #return linear activations of output
+        #print self.outputs[-1].get_shape()
+        return self.outputs[-1]  #return linear activations of output

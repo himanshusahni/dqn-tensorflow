@@ -12,7 +12,7 @@ class fire_fighter(object):
     """
     Taxi cab style domain
     """
-    actions = ['Left', 'Right', 'Up', 'Down', 'Pick', 'Drop']
+    actions = ['Left', 'Right', 'Up', 'Down']
 
     def __init__(self, params):
         self.screen_size = params.img_size
@@ -73,43 +73,43 @@ class fire_fighter(object):
                  boolean: whether the new state is a terminal state or not
         """
         reward = 0
-        if a == 4 or a == 5: #same square
-            if self.agent == self.water: #on water or has water
+        # if a == 4 or a == 5: #same square
+        #     if self.agent == self.water: #on water or has water
+        #
+        #         if self.has_water: #can drop
+        #             if a == 5:
+        #                 # print('Dropping Water')
+        #                 self.has_water = False
+        #                 if self.isAdjacent(self.fire, self.agent): #agent is adjacent to fire
+        #                     # print('Dousing. Win.')
+        #                     self.agent = self.fire
+        #                     self.water = self.fire
+        #                     reward = 1
+        #         else: #can pick
+        #             if a == 4:
+        #                 # print('Picking Water Up')
+        #                 self.has_water = True #positive reward
+        # else:
+        if a == 0:
+            self.agent = (self.agent[0], self.agent[1] - 1) if self.agent[1] > 0 else self.agent
+        elif a == 1:
+            self.agent = (self.agent[0], self.agent[1] + 1) if self.agent[1] < self.grid_size[1] - 1 else self.agent
+        elif a == 2:
+            self.agent = (self.agent[0] - 1, self.agent[1]) if self.agent[0] > 0 else self.agent
+        elif a == 3:
+            self.agent = (self.agent[0] + 1, self.agent[1]) if self.agent[0] < self.grid_size[0] - 1 else self.agent
 
-                if self.has_water: #can drop
-                    if a == 5:
-                        # print('Dropping Water')
-                        self.has_water = False
-                        if self.isAdjacent(self.fire, self.agent): #agent is adjacent to fire
-                            # print('Dousing. Win.')
-                            self.agent = self.fire
-                            self.water = self.fire
-                            reward = 1
-                else: #can pick
-                    if a == 4:
-                        # print('Picking Water Up')
-                        self.has_water = True #positive reward
-        else:
-            if a == 0:
-                self.agent = (self.agent[0], self.agent[1] - 1) if self.agent[1] > 0 else self.agent
-            elif a == 1:
-                self.agent = (self.agent[0], self.agent[1] + 1) if self.agent[1] < self.grid_size[1] - 1 else self.agent
-            elif a == 2:
-                self.agent = (self.agent[0] - 1, self.agent[1]) if self.agent[0] > 0 else self.agent
-            elif a == 3:
-                self.agent = (self.agent[0] + 1, self.agent[1]) if self.agent[0] < self.grid_size[0] - 1 else self.agent
 
+            # if self.has_water:
+            #     self.water = self.agent
 
-            if self.has_water:
-                self.water = self.agent
+        if self.agent == self.fire: #die
+            # print('Death.')
+            reward = -1 #negative reward
 
-            if self.agent == self.fire: #die
-                # print('Death.')
-                reward = -1 #negative reward
-
-            #TODO: turning into simple gridworld
-            if self.agent == self.water: #win
-                reward = 1
+        #TODO: turning into simple gridworld
+        if self.agent == self.water: #win
+            reward = 1
 
         return (self.grab_screen(), reward, self.isTerminal())
 
@@ -118,7 +118,7 @@ class fire_fighter(object):
         Decides if terminal condition has been reached
         :return: True if water douses fire or agent walks into fire
         """
-        return ((self.fire == self.water) and not self.has_water) or (self.agent == self.fire) or (self.agent == self.water)
+        return (self.agent == self.fire) or (self.agent == self.water)
 
     def isAdjacent(self, coord, check_coord):
         # print("Fire: ", coord)
