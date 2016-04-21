@@ -3,6 +3,7 @@ contains all training parameters for the full dqn+rnn for transfer
 may also contain parameters for the domain
 """
 
+<<<<<<< HEAD
 """parameters for the convnet"""
 n_units       = [32, 64, 64]      #convolution filters at each layer
 filter_size   = [8, 4, 4]         #size at each layer

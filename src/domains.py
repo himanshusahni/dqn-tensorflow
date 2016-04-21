@@ -12,7 +12,7 @@ class fire_fighter(object):
     """
     Taxi cab style domain
     """
-    actions = ['Left', 'Right', 'Up', 'Down', 'Pick', 'Drop']
+    actions = ['Left', 'Right', 'Up', 'Down']
 
     def __init__(self):
         self.screen_size = [g*params.grid_to_pixel for g in params.grid_size]

@@ -54,8 +54,10 @@ class dqn():
         #ops to train network
         #self.learning_rate = tf.train.exponential_decay(net_params.lr, global_step, net_params.lr_step, 0.96, staircase=True)
 
+
         self.opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
         # tf.scalar_summary('learning_rate', self.learning_rate)
+
         #get loss
         self.train_actions_placeholder = tf.placeholder(tf.float32, [None, self.num_actions])
         self.target_placeholder = tf.placeholder(tf.float32, [self.batch_size])
@@ -73,6 +75,7 @@ class dqn():
         self.clipped_loss_vec = self.target_placeholder - self.Q_train_actions
         self.loss = tf.reduce_mean(tf.square(self.diff))
         # loss_summary = tf.scalar_summary("loss", self.loss)
+
         #create the gradient descent op
         #grads_and_vars = self.opt.compute_gradients(self.loss)
         #capped_grads_and_vars = [(tf.clip_by_value(g, -self.clip_delta, self.clip_delta), v) for g, v in grads_and_vars]    #gradient capping
@@ -184,6 +187,7 @@ if __name__ == "__main__":
     # merged = tf.merge_all_summaries()
     # writer = tf.train.SummaryWriter("./logs-exp", sess.graph_def)
     saver = tf.train.Saver(max_to_keep=0)
+
     valid_game = game_env.Environment(domains.fire_fighter)
     steps = 0
     successes = 0
@@ -193,7 +197,7 @@ if __name__ == "__main__":
     try:
         with sess.as_default():
             #run random steps in the beginning
-            with open("models/stats_dump.txt", 'wb') as dumpFile:
+            with open("models-grad/stats_dump.txt", 'wb') as dumpFile:
                 print "STARTING RANDOM INITIALIZATIONS"
                 while(steps < params.learn_start):
                     r, t = agent.perceive(dumpFile)
@@ -248,7 +252,7 @@ if __name__ == "__main__":
                     #save
                     if (steps % params.save_freq == 0):
                         print "SAVING MODEL AFTER " + str(steps) + " ..."
-                        saver.save(sess, "./models/model", global_step = steps)
+                        saver.save(sess, "./models-grad/model", global_step = steps)
                         ###DEBUGGING###
                         """print "Dumping Minibatch!"
                         minibatch = random.sample(agent.experience, agent.batch_size)

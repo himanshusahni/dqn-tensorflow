@@ -16,7 +16,11 @@ class Environment(object):
         self.episodes = 0    #keeps track of number of episodes elapsed
         self.ep_reward = 0     #keeps track of epsodic reward
         self.training_steps = 0
+<<<<<<< HEAD
         self.ep = params.ep                           #starting exploration randomness
+=======
+        self.ep = params.agent_params.ep                           #starting exploration randomness
+>>>>>>> ddbc92670379fe0920a5ab6cc627da2d5dc1bed4
 
     def flush_history(self):
         """fill history buffer with zeros"""
