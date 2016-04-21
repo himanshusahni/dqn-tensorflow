@@ -1,21 +1,22 @@
 from collections import deque
 import numpy as np
 import params
+from copy import deepcopy
 
 class Environment(object):
     """Shell for simplyfying certain tasks for agent"""
+
     def __init__(self, game):
         #game parameters
-        self.game = game(params.game_params)
+        self.game = game()
         self.img_size = self.game.get_dims()
-        self.history = params.agent_params.history
+        self.history = params.history
         self.screen_history = deque(maxlen=self.history)
         self.counter = 0    #keeps track of number of steps taken in domain
         self.episodes = 0    #keeps track of number of episodes elapsed
         self.ep_reward = 0     #keeps track of epsodic reward
         self.training_steps = 0
-        self.ep = params.agent_params.ep                           #starting exploration randomness
-        self.new_game()
+        self.ep = params.ep                           #starting exploration randomness
 
     def flush_history(self):
         """fill history buffer with zeros"""
@@ -23,10 +24,7 @@ class Environment(object):
             self.screen_history.append(np.expand_dims(np.zeros(self.img_size), -1))
 
     def get_actions(self):
-        return self.game.actions
-
-    def get_num_actions(self):
-        return len(self.game.actions)
+        return self.game.get_actions()
 
     def get_img_size(self):
         return self.img_size
@@ -48,7 +46,7 @@ class Environment(object):
 
     def get_state(self):
         """current state of the agent in the game (concatenation of the last self.history frames)"""
-        return np.concatenate([self.screen_history[hist] for hist in range(0, self.history)], axis=2)
+        return deepcopy(np.concatenate([self.screen_history[hist] for hist in range(0, self.history)], axis=2))
 
     def take_action(self, a, valid):
         """take the action in the game, update history and return new state, reward and terminal"""
@@ -75,6 +73,7 @@ class Environment(object):
         ycbcr[:,:,0] = .299*rgb_array[:,:,0] + .587*rgb_array[:,:,1] + .114*rgb_array[:,:,2] #y
         ycbcr[:,:,1] = 0.5 -.168736*rgb_array[:,:,0] -.331364*rgb_array[:,:,1] + .5*rgb_array[:,:,2]
         ycbcr[:,:,2] = 0.5 +.5*rgb_array[:,:,0] - .418688*rgb_array[:,:,1] - .081312*rgb_array[:,:,2]
+	ycbcr = np.around(255*ycbcr)
         return ycbcr
 
 if __name__ == "__main__":

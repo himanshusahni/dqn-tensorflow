@@ -5,7 +5,7 @@ import numpy as np
 import random
 from collections import deque
 
-from params import game_params
+import params
 
 
 class fire_fighter(object):
@@ -14,8 +14,8 @@ class fire_fighter(object):
     """
     actions = ['Left', 'Right', 'Up', 'Down', 'Pick', 'Drop']
 
-    def __init__(self, params):
-        self.screen_size = params.img_size
+    def __init__(self):
+        self.screen_size = [g*params.grid_to_pixel for g in params.grid_size]
         self.grid_size = params.grid_size
         self.grid_to_pixel = params.grid_to_pixel
         self.agent_color = params.agent_color
@@ -25,14 +25,25 @@ class fire_fighter(object):
         #initialize domain
         self.reset()
 
+    def get_actions(self):
+        return self.actions
+
+
     def reset(self):
         """initialize locations of agent, fire and water"""
         #TODO: possible to make this more efficient (in larger domains it's wasteful computation)
         possible_coordinates = [(x, y) for x in range(self.grid_size[0]) for y in range(self.grid_size[1])]
-        coord_pool = random.sample(possible_coordinates, 3)
+        self.fire = (int((self.grid_size[0]-1)/2 - 1),int((self.grid_size[1]-1)/2 - 1))
+        possible_coordinates.remove(self.fire)
+        coord_pool = random.sample(possible_coordinates, 2)
         self.agent = coord_pool[0]
-        self.fire = coord_pool[1]
-        self.water = coord_pool[2]
+        # self.fire = coord_pool[1]
+        self.water = coord_pool[1]
+
+        # self.water = (int((self.grid_size[0]-1)/2 + 1),int((self.grid_size[1]-1)/2) + 1)
+        # self.agent = (random.randint(0,self.grid_size[0]-1), random.randint(0,self.grid_size[1]-1))
+        # while self.agent == self.fire or self.agent == self.water:
+            # self.agent = (random.randint(0,self.grid_size[0]-1), random.randint(0,self.grid_size[1]-1))
         self.has_water = False
         # print("Agent: " , self.agent, "Fire: ", self.fire , " Water: ", self.water, " Has Water: ", self.has_water)
 
@@ -107,9 +118,9 @@ class fire_fighter(object):
                 # print('Death.')
                 reward = -1 #negative reward
 
-            #TODO: turning into simple gridworld
-            if self.agent == self.water: #win
-                reward = 1
+        #TODO: turning into simple gridworld
+        # if self.agent == self.water: #win
+        #     reward = 1
 
         return (self.grab_screen(), reward, self.isTerminal())
 
@@ -118,7 +129,7 @@ class fire_fighter(object):
         Decides if terminal condition has been reached
         :return: True if water douses fire or agent walks into fire
         """
-        return ((self.fire == self.water) and not self.has_water) or (self.agent == self.fire) or (self.agent == self.water)
+        return ((self.fire == self.water) and not self.has_water) or (self.agent == self.fire)
 
     def isAdjacent(self, coord, check_coord):
         # print("Fire: ", coord)
