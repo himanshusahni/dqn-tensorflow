@@ -8,18 +8,14 @@ class ConvNetGenerator():
     """
     creates, initializes, and returns a convolutional neural network with given params.
     """
-    def __init__(self, _img_size, _actions, trainable):
+    def __init__(self, img_size, num_actions, trainable):
         """
         net_input is a placeholder variable.
         """
-        self.img_size = _img_size
-        (self.img_height, self.img_width) = self.img_size
-        self.num_actions = _actions
-        self.state_placeholder = tf.placeholder(tf.float32, [None, self.img_height, self.img_width, params.history])
-        self.trainable = trainable     #whether the weights on this network will be trained
-        self.input_shape = [None, self.img_height, self.img_width, params.history]  #batch of input images to net
+        self.input_shape = [None, img_size[0], img_size[1], params.history]  #batch of input images to net
+        self.state_placeholder = tf.placeholder(tf.float32, self.input_shape)
         self.input_dims = self.input_shape[1]*self.input_shape[2]*self.input_shape[3]   #pixels in each image
-        self.output_dims = self.num_actions
+        self.output_dims = num_actions
         self.n_units = params.n_units
         self.conv_layers = len(params.n_units)   #number of convolutional layers
         self.filter_size = params.filter_size
@@ -28,6 +24,7 @@ class ConvNetGenerator():
         assert(len(self.filter_stride) == self.conv_layers), "Filter stride for all layers must be defined!"
         self.n_hid = params.n_hid
         self.full_connect_layers = len(params.n_hid)   #number of fully connected layers
+        self.trainable = trainable     #whether the weights on this network will be trained
 
         #store a dictionary to all weights in network
         self.var_dir = {}
