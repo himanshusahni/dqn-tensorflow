@@ -8,14 +8,13 @@ class ConvNetGenerator():
     """
     creates, initializes, and returns a convolutional neural network with given params.
     """
-    def __init__(self, game_env, trainable):
+    def __init__(self, _img_size, _actions, trainable):
         """
         net_input is a placeholder variable.
         """
-        self.img_size = game_env.get_img_size()
+        self.img_size = _img_size
         (self.img_height, self.img_width) = self.img_size
-        self.available_actions = game_env.get_actions()
-        self.num_actions = len(self.available_actions)
+        self.num_actions = _actions
         self.state_placeholder = tf.placeholder(tf.float32, [None, self.img_height, self.img_width, params.history])
         self.trainable = trainable     #whether the weights on this network will be trained
         self.input_shape = [None, self.img_height, self.img_width, params.history]  #batch of input images to net

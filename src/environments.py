@@ -3,12 +3,12 @@ import numpy as np
 import params
 from copy import deepcopy
 
-class Environment(object):
+class GenericEnvironment(object):
     """Shell for simplyfying certain tasks for agent"""
 
-    def __init__(self, game):
+    def __init__(self, _game):
         #game parameters
-        self.game = game()
+        self.game = _game
         self.img_size = self.game.get_dims()
         self.history = params.history
         self.screen_history = deque(maxlen=self.history)
@@ -16,7 +16,6 @@ class Environment(object):
         self.episodes = 0    #keeps track of number of episodes elapsed
         self.ep_reward = 0     #keeps track of epsodic reward
         self.training_steps = 0
-        self.ep = params.ep                           #starting exploration randomness
 
     def flush_history(self):
         """fill history buffer with zeros"""

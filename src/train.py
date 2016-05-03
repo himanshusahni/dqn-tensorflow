@@ -8,7 +8,7 @@ import traceback
 from collections import deque
 
 import params
-import game_env
+import environments
 import convnet
 import domains
 import dqn
@@ -17,7 +17,8 @@ import dqn
 #create session and agent
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1)      #can set how much memory to allocate on GPU
 sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
-agent = dqn.dqn(sess, domains.fire_fighter)
+game_env = environments.GenericEnvironment(domains.fire_fighter())
+agent = dqn.dqn(sess, game_env)
 
 #initialize everything
 sess.run(tf.initialize_all_variables())
@@ -84,7 +85,9 @@ try:
 
             #perceive the next state
             r, t = agent.perceive()
-
+            #anneal epsilon
+            if steps < params.ep_endt:
+                agent.ep -= agent.ep_delta    #anneal epsilon
             ############################## copy over target network if needed #################################
             if steps % params.target_q == 0:
                 print "COPYING TARGET NETWORK OVER AT " + str(steps)
@@ -109,7 +112,7 @@ try:
                 avg_loss /= params.log_freq
                 end_time = time.time()
                 print "Size of history: ", len(agent.experience), "; Training steps: ", steps,\
-                                                "; epsilon ", agent.env.ep, "; Successes perceived: ", successes,\
+                                                "; epsilon ", agent.ep, "; Successes perceived: ", successes,\
                                                 "; Failures perceived ", failures, "; Successes sampled ", successes_sampled,\
                                                 "; Failures sampled ", failures_sampled,\
                                                 "; Average batch loss ", avg_loss,\

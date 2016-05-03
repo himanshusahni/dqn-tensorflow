@@ -8,20 +8,20 @@ import traceback
 from collections import deque
 
 import params
-import game_env
 import convnet
 import domains
 
 class dqn():
     """deep q learning agent"""
 
-    def __init__(self, sess, gameworld):
+    def __init__(self, sess, game_env):
         #firstly set up all parameters
         self.max_steps = params.steps                 #max training steps
         self.replay_memory = params.replay_memory     #max length of memory queue
         self.min_replay = params.min_replay           #min length of memory queue
         self.history = params.history                 #no. of frames of memory in state
         self.gamma = params.gamma                     #discount factor
+        self.ep = params.ep                           #exploration epsilon
         self.ep_delta = (params.ep - params.ep_end)/params.ep_endt
         self.learn_start = params.learn_start         #steps after which epsilon gets annealed
         self.ep_endt = params.ep_endt                 #steps after which epsilon stops annealing
@@ -30,8 +30,6 @@ class dqn():
 
         #learning rate decay
         self.global_step = tf.Variable(0, trainable=False)   #number of training steps
-        if params.summary > 0:
-            tf.scalar_summary('global_step', global_step)
         if params.lr_anneal:
             self.learning_rate = tf.train.exponential_decay(params.lr, self.global_step, params.lr_anneal, 0.96, staircase=True)
         else:
@@ -39,8 +37,8 @@ class dqn():
 
         self.sess = sess    #tensorflow session
 
-        #create game environment
-        self.env = game_env.Environment(gameworld)
+        #game environment
+        self.env = game_env
         self.state = self.env.new_game()
         self.img_size = self.env.get_img_size()
         (self.img_height, self.img_width) = self.img_size
@@ -52,9 +50,9 @@ class dqn():
 
         #create train and target networks
         with tf.variable_scope("train") as self.train_scope:
-            self.train_net = convnet.ConvNetGenerator(self.env, trainable=True)
+            self.train_net = convnet.ConvNetGenerator(self.img_size, self.num_actions, trainable=True)
         with tf.variable_scope("target") as self.target_scope:
-            self.target_net = convnet.ConvNetGenerator(self.env, trainable=False)
+            self.target_net = convnet.ConvNetGenerator(self.img_size, self.num_actions, trainable=False)
 
         #ops to train network
         self.opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
@@ -93,12 +91,9 @@ class dqn():
         different game sessions. Enqueues all sessions to a RandomShuffleQueue
         """
         try:
-            # max_a = np.random.randint(0,self.num_actions - 1)
             #e-greedy action selection
             if not valid:
-                if self.learn_start < self.env.counter < self.ep_endt:
-                    self.env.ep -= self.ep_delta    #anneal epsilon
-                chosen_ep = self.env.ep
+                chosen_ep = self.ep
             else:
                 chosen_ep = self.valid_ep
             if (random.random() < chosen_ep):
