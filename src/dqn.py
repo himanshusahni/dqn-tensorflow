@@ -121,45 +121,64 @@ class dqn():
             sys.exit()
 
 
-# def getQUpdate(self, states, actions, rewards, next_states, terminals):
-#     """calulcates gradients on a minibatch"""
-#     #get max action for next state: Q_target
-#     with tf.variable_scope(self.target_scope, reuse = True):
-#         Q_target = self.target_net.inference(next_states)
-#         Q_target_max_pre = tf.reduce_max(Q_target, reduction_indices=[1])
-#     #terminal states have Q=0, Q_target_max = (1-terminal)*Q_target_max
-#     Q_target_max = tf.mul(Q_target_max_pre, tf.add(1.0, tf.mul(tf.cast(terminals, tf.float32), -1)))
-#     #discount: (1-terminal)*gamma*Q_target_max
-#     Q_target_disc = tf.mul(Q_target_max , self.gamma)
-#     #total estimated value : r + (1-terminal)*gamma*Q_target_max
-#     est_value = tf.add(rewards, Q_target_disc)
-#     #get action values for current state: Q_train
-#     with tf.variable_scope(self.train_scope, reuse = True):
-#         Q_train = self.train_net.inference(states)
-#     #first zero out all the action values except the one taken
-#     Q_train_one_hot = tf.mul(Q_train, tf.cast(actions, tf.float32))
-#     #now gather them using sum
-#     Q_train_actions = tf.reduce_sum(Q_train_one_hot, reduction_indices=[1])
-#     #final targets = r + (1-terminal)*gamma*Q_target_max - Q_train_actions
-#     targets = tf.add(est_value, tf.mul(Q_train_actions, -1))
-#     return targets
+    # def getQUpdate(self, states, actions, rewards, next_states, terminals):
+    #     """calulcates gradients on a minibatch"""
+    #     #get max action for next state: Q_target
+    #     with tf.variable_scope(self.target_scope, reuse = True):
+    #         Q_target = self.target_net.inference(next_states)
+    #         Q_target_max_pre = tf.reduce_max(Q_target, reduction_indices=[1])
+    #     #terminal states have Q=0, Q_target_max = (1-terminal)*Q_target_max
+    #     Q_target_max = tf.mul(Q_target_max_pre, tf.add(1.0, tf.mul(tf.cast(terminals, tf.float32), -1)))
+    #     #discount: (1-terminal)*gamma*Q_target_max
+    #     Q_target_disc = tf.mul(Q_target_max , self.gamma)
+    #     #total estimated value : r + (1-terminal)*gamma*Q_target_max
+    #     est_value = tf.add(rewards, Q_target_disc)
+    #     #get action values for current state: Q_train
+    #     with tf.variable_scope(self.train_scope, reuse = True):
+    #         Q_train = self.train_net.inference(states)
+    #     #first zero out all the action values except the one taken
+    #     Q_train_one_hot = tf.mul(Q_train, tf.cast(actions, tf.float32))
+    #     #now gather them using sum
+    #     Q_train_actions = tf.reduce_sum(Q_train_one_hot, reduction_indices=[1])
+    #     #final targets = r + (1-terminal)*gamma*Q_target_max - Q_train_actions
+    #     targets = tf.add(est_value, tf.mul(Q_train_actions, -1))
+    #     return targets
     #
-    # def qLearnMinibatch(self, global_step):
-    #     """draws minibatch from experience queue and updates current net"""
-    #     try:
-    #         #get loss
-    #         loss_all = tf.square(targets)
-    #         loss = tf.reduce_mean(loss_all)
-    #         loss_summary = tf.scalar_summary("loss", tf.reduce_sum(tf.mul(loss, loss)))
-    #         #create the gradient descent op
-    #         grads_and_vars = self.opt.compute_gradients(loss)
-    #         capped_grads_and_vars = [(tf.clip_by_value(g, -self.clip_delta, self.clip_delta), v) for g, v in grads_and_vars]    #gradient capping
-    #         #save gradients
-    #         gradient_summaries = [tf.histogram_summary("grad - " + v.name, g) for g, v in capped_grads_and_vars]
-    #         self.opt_op = self.opt.apply_gradients(capped_grads_and_vars, global_step=global_step)
-    #         tf.scalar_summary('global_step', global_step)
-    #         return self.opt_op
-    #
-    #     except Exception as e:
-    #         traceback.print_exc()
-    #         sys.exit()
+    def qLearnMinibatch(self, successes_sampled, failures_sampled):
+        """draws minibatch from experience queue and trains net"""
+        try:
+            #draw minibatch
+            minibatch = random.sample(self.experience, self.batch_size)
+            states = np.array([minibatch[i][0] for i in range(self.batch_size)]).astype(np.float32)
+            actions = np.array([minibatch[i][1] for i in range(self.batch_size)]).astype(np.float32)
+            rewards = np.array([minibatch[i][2] for i in range(self.batch_size)]).astype(np.float32)
+            successes_sampled += np.sum(rewards==1)
+            failures_sampled += np.sum(rewards==-1)
+            next_states = np.array([minibatch[i][3] for i in range(self.batch_size)]).astype(np.float32)
+            terminals = np.array([minibatch[i][4] for i in range(self.batch_size)]).astype(np.float32)
+
+            #calculate the bellman target = r + gamma*(1-terminal)*max(Q_target)
+            Q_target = self.target_net.logits.eval(feed_dict={self.target_net.state_placeholder:next_states})
+            Q_target_max = np.amax(Q_target, axis=1)
+            Q_target_terminal = (1-terminals)*Q_target_max
+            Q_target_gamma = self.gamma*Q_target_terminal
+            target = rewards + Q_target_gamma
+
+            #################################### run the training step ########################################
+            if params.summary > 0 and steps % params.log_freq == 0:
+                (summary, result, loss) = self.sess.run([merged, self.train_op, self.loss],
+                                                    feed_dict={self.target_placeholder:target,
+                                                                self.train_net.state_placeholder:states,
+                                                                self.actions_placeholder: actions})
+            else:
+                (result, loss) = self.sess.run([self.train_op, self.loss],
+                                            feed_dict={self.target_placeholder:target,
+                                            self.train_net.state_placeholder:states,
+                                            self.actions_placeholder: actions})
+
+
+
+            return successes_sampled, failures_sampled, loss
+        except Exception as e:
+            traceback.print_exc()
+            sys.exit()

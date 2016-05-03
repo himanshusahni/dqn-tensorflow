@@ -55,33 +55,7 @@ try:
         while(steps < params.steps):
             steps += 1
             ######################################## draw a minibatch #########################################
-            minibatch = random.sample(agent.experience, agent.batch_size)
-            states = np.array([minibatch[i][0] for i in range(agent.batch_size)]).astype(np.float32)
-            actions = np.array([minibatch[i][1] for i in range(agent.batch_size)]).astype(np.float32)
-            rewards = np.array([minibatch[i][2] for i in range(agent.batch_size)]).astype(np.float32)
-            successes_sampled += np.sum(rewards==1)
-            failures_sampled += np.sum(rewards==-1)
-            next_states = np.array([minibatch[i][3] for i in range(agent.batch_size)]).astype(np.float32)
-            terminals = np.array([minibatch[i][4] for i in range(agent.batch_size)]).astype(np.float32)
-
-            #calculate the bellman target = r + gamma*(1-terminal)*max(Q_target)
-            Q_target = agent.target_net.logits.eval(feed_dict={agent.target_net.state_placeholder:next_states})
-            Q_target_max = np.amax(Q_target, axis=1)
-            Q_target_terminal = (1-terminals)*Q_target_max
-            Q_target_gamma = agent.gamma*Q_target_terminal
-            target = rewards + Q_target_gamma
-
-            #################################### run the training step ########################################
-            if params.summary > 0 and steps % params.log_freq == 0:
-                (summary, result, loss) = sess.run([merged, agent.train_op, agent.loss],
-                                                    feed_dict={agent.target_placeholder:target,
-                                                                agent.train_net.state_placeholder:states,
-                                                                agent.actions_placeholder: actions})
-            else:
-                (result, loss) = sess.run([agent.train_op, agent.loss],
-                                            feed_dict={agent.target_placeholder:target,
-                                            agent.train_net.state_placeholder:states,
-                                            agent.actions_placeholder: actions})
+            successes_sampled, failures_sampled, loss = agent.qLearnMinibatch(successes_sampled, failures_sampled)
 
             #perceive the next state
             r, t = agent.perceive()
