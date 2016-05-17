@@ -5,6 +5,7 @@ import sys
 
 import dqn
 import domains
+import environments
 
 def unycbcr(state):
     new_state = np.zeros(state.shape+(3,))
@@ -24,9 +25,10 @@ def unycbcr(state):
 if __name__ == "__main__":
     #create session and agent
     sess = tf.Session()
-    global_step = tf.Variable(0, trainable=False)
-    agent = dqn.dqn(sess, domains.fire_fighter, global_step)
-    actions = agent.env.get_actions()
+    game_env = environments.GenericEnvironment(domains.fire_fighter())
+    agent = dqn.dqn(sess, game_env)
+    actions = game_env.get_actions()
+    print actions
     #load previous agent
     saver = tf.train.Saver()
     # model = tf.train.get_checkpoint_state("./models-new/")
@@ -34,9 +36,9 @@ if __name__ == "__main__":
     #     print "Loading model " + model.model_checkpoint_path
     #     saver.restore(sess, model.model_checkpoint_path)
 
-    model_num = 2120000
+    model_num = 200000
     print "Loading model model-" + str(model_num)
-    saver.restore(sess, "models-taxi/model-" + str(model_num))
+    saver.restore(sess, "models/model-" + str(model_num))
     #set up GUI
     plt.ion()
     f = plt.figure()

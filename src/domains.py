@@ -12,7 +12,7 @@ class fire_fighter(object):
     """
     Taxi cab style domain
     """
-    actions = ['Left', 'Right', 'Up', 'Down']
+    actions = ['Left', 'Right', 'Up', 'Down', 'Pick', 'Drop']
 
     def __init__(self):
         self.screen_size = [g*params.grid_to_pixel for g in params.grid_size]
@@ -33,7 +33,8 @@ class fire_fighter(object):
         """initialize locations of agent, fire and water"""
         #TODO: possible to make this more efficient (in larger domains it's wasteful computation)
         possible_coordinates = [(x, y) for x in range(self.grid_size[0]) for y in range(self.grid_size[1])]
-        self.fire = (int((self.grid_size[0]-1)/2 - 1),int((self.grid_size[1]-1)/2 - 1))
+        self.fire = (int((self.grid_size[0]-1)/2),int((self.grid_size[1]-1)/2))
+        print self.fire
         possible_coordinates.remove(self.fire)
         coord_pool = random.sample(possible_coordinates, 2)
         self.agent = coord_pool[0]
