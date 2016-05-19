@@ -65,15 +65,15 @@ class dqn():
         self.Q_train = self.train_net.logits
         self.Q_train_actions = tf.reduce_sum(tf.mul(self.Q_train, self.actions_placeholder), reduction_indices=[1])
         self.diff = self.target_placeholder - self.Q_train_actions
-    	#diff_abs = tf.abs(self.diff)
-    	#diff_clipped = tf.clip_by_value(diff_abs, 0, 1)
-    	#linear_part = diff_abs - diff_clipped
-    	#quadratic_part = tf.square(diff_clipped)
-    	#total = quadratic_part + linear_part
-    	#self.loss = tf.reduce_mean(total)
+    	diff_abs = tf.abs(self.diff)
+    	diff_clipped = tf.clip_by_value(diff_abs, 0, 1)
+    	linear_part = diff_abs - diff_clipped
+    	quadratic_part = tf.square(diff_clipped)
+    	total = quadratic_part + linear_part
+    	self.loss = tf.reduce_mean(total)
     	#self.opt_op = tf.train.AdamOptimizer(1e-6).minimize(self.loss)
         # self.clipped_loss_vec = tf.clip_by_value(self.target_placeholder - self.Q_train_actions, -self.clip_delta, self.clip_delta)
-        self.loss = tf.reduce_mean(tf.square(self.diff))
+        # self.loss = tf.reduce_mean(tf.square(self.diff))
         if params.summary > 0:
             tf.scalar_summary("loss", self.loss)
 
