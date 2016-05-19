@@ -155,31 +155,3 @@ class fire_fighter(object):
         x = coord[0]
         y = coord[1]
         return 0 <= x < self.grid_size[0] and 0 <= y < self.grid_size[1]
-
-
-def main():
-     """
-     Test Method - wasd to move. z to pickup, x to drop, l to end.
-     """
-     fighter = fire_fighter(game_params)
-     gui = display(fighter.grid_size, fighter.grid_to_pixel)
-     gui.draw(fighter.grab_screen())
-     print("New Instance: Agent: " , fighter.agent, "Fire(s): ", fighter.fire , " Water(s): ", fighter.water)
-     inp = None
-     while (inp != "l" and not fighter.isTerminal()):
-         inp = raw_input("Input: ")
-         mapping = {"a": 0, "d": 1, "w": 2, "s": 3, "z": 4, "x": 5}
-         if inp in mapping:
-             fighter.execute_action(mapping[inp])
-             gui.draw(fighter.disp_arr)
-         elif inp == 'l':
-             print("Quitting")
-         else:
-             print("Illegal")
-         # print("Agent: " , fighter.agent, "Fire: ", fighter.fire , " Water: ", fighter.water, " Has Water: ", fighter.has_water)
-     gui.quit()
-
-     # TODO: add -d flag for display mode
-
-if __name__ == "__main__":
-     main()
