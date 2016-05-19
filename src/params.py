@@ -13,7 +13,6 @@ lr            = 1e-4              #learning rate
 lr_anneal     = 2e4               #step size of lr annealing (0 if no annealing)
 clip_delta    = 1                 #gradient clipping
 
-
 """paramaters for agent behavior"""
 num_gameplay_threads = 3          #unused in serial
 history              = 1          #frames stored in history buffer
@@ -42,3 +41,5 @@ fire_color        = [1.0,0,0]       #rgb
 agent_color       = [0,1.0,0]
 water_color       = [0,0,1.0]
 agent_water_color = [1.0,1.0,1.0]
+num_fires = 2
+num_waters = 3
