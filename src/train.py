@@ -65,7 +65,7 @@ try:
             ############################## copy over target network if needed #################################
             if steps % params.target_q == 0:
                 print "COPYING TARGET NETWORK OVER AT " + str(steps)
-                agent.target_net.copy_weights(agent.train_net.var_dir, sess)
+                agent.target_net.copy_weights(agent.train_net, sess)
 
             ############################### all book keeping now ##############################################
             #for printing

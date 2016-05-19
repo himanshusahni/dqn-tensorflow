@@ -50,7 +50,8 @@ class ConvNetGenerator():
                                 initializer=tf.constant_initializer(0.01),
                                 trainable=self.trainable)
 
-    def copy_weights(self, other_var_dir, sess):
+    def copy_weights(self, other_net, sess):
+        other_var_dir = other_net.var_dir
         for (other_var_name, other_var) in other_var_dir.iteritems():
             var_name = self.scope_name + '/' + other_var_name.split('/', 1)[1]
             other_var_eval = other_var.eval()
