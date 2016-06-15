@@ -35,9 +35,9 @@ class fire_fighter(object):
         possible_coordinates = [(x, y) for x in range(self.grid_size[0]) for y in range(self.grid_size[1])]
         coord_pool = random.sample(possible_coordinates, params.num_fires + params.num_waters + 1)
         self.agent = coord_pool[0]
-        self.fire = [(3,3),(5,3)]
+        self.fire = [(int(self.grid_size[0]/2), int(self.grid_size[1]/2))]
         # self.fire = coord_pool[1:params.num_fires + 1]
-        self.water = coord_pool[params.num_fires + 1:]
+        self.water = [coord_pool[1]]
         self.has_water = False
         self.picked_at = None
 

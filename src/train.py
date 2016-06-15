@@ -77,7 +77,7 @@ try:
             #save model
             if (steps % params.save_freq == 0):
                 print "SAVING MODEL AFTER " + str(steps) + " ..."
-                saver.save(sess, "./models-grad/model", global_step = steps)
+                saver.save(sess, "./models/model", global_step = steps)
             #log summaries if needed
             if (steps > params.log_start) and (steps % params.log_freq == 0):
                 if params.summary > 0:
